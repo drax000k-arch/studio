@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/summarize-community-posts.ts';
+import '@/ai/flows/generate-decision-justification.ts';
+import '@/ai/flows/generate-decision-titles.ts';
