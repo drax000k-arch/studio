@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Send, Sparkles, Trash2, Wand2, Share2 } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Trash2, Wand2, Share2, BrainCircuit } from 'lucide-react';
 import { getAiDecision, type ActionState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
