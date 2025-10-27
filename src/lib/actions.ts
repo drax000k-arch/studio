@@ -1,6 +1,7 @@
 'use server';
 
 import { generateDecisionJustification } from '@/ai/flows/generate-decision-justification';
+import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
 
@@ -14,9 +15,13 @@ const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Subject must be at least 3 characters long.' }),
   options: z.array(z.object({ value: z.string().min(1, { message: 'Option cannot be empty.' }) }))
     .min(2, { message: 'Please provide at least two options.' }),
+  userContext: z.string().optional(),
+  responseLength: z.enum(['short', 'long']),
 });
 
-export async function getAiDecision(data: { subject: string; options: {value: string}[] }): Promise<ActionState> {
+export async function getAiDecision(
+  data: z.infer<typeof decisionFormSchema>
+): Promise<ActionState> {
   const validation = decisionFormSchema.safeParse(data);
 
   if (!validation.success) {
@@ -26,19 +31,27 @@ export async function getAiDecision(data: { subject: string; options: {value: st
     };
   }
 
-  const { subject, options } = validation.data;
+  const { subject, options, userContext, responseLength } = validation.data;
   const optionValues = options.map(o => o.value);
 
   try {
-    // The AI flow `generateDecisionJustification` requires a recommendation to be passed in.
-    // As there is no flow to *make* the decision, we'll simulate the AI's choice
-    // by randomly picking one of the user's options.
-    const aiRecommendation = optionValues[Math.floor(Math.random() * optionValues.length)];
+    const recommendationResult = await generateDecisionRecommendation({
+      subject,
+      options: optionValues,
+      userContext: userContext ?? 'No personal context provided.',
+    });
 
+    if (!recommendationResult.recommendation) {
+      throw new Error("Failed to generate a recommendation.");
+    }
+    
+    const aiRecommendation = recommendationResult.recommendation;
+    
     const justificationResult = await generateDecisionJustification({
       subject,
       options: optionValues,
       aiRecommendation,
+      responseLength,
     });
     
     if (!justificationResult.justification) {

@@ -15,6 +15,7 @@ const GenerateDecisionJustificationInputSchema = z.object({
   subject: z.string().describe('The subject of the decision.'),
   options: z.array(z.string()).describe('The options to consider.'),
   aiRecommendation: z.string().describe('The AI recommended option.'),
+  responseLength: z.enum(['short', 'long']).describe('The desired length of the justification.'),
 });
 export type GenerateDecisionJustificationInput = z.infer<
   typeof GenerateDecisionJustificationInputSchema
@@ -43,7 +44,7 @@ const prompt = ai.definePrompt({
   Options: {{#each options}}{{{this}}}, {{/each}}
   AI Recommendation: {{{aiRecommendation}}}
 
-  Provide a clear and concise justification for the AI's recommended option, explaining the reasoning and factors considered. Focus on logical reasoning, budget considerations, and any other relevant parameters.
+  Provide a clear and {{#if (eq responseLength "short")}}concise{{else}}detailed{{/if}} justification for the AI's recommended option, explaining the reasoning and factors considered. Focus on logical reasoning, budget considerations, and any other relevant parameters.
   `,
 });
 
