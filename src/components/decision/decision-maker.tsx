@@ -153,18 +153,8 @@ export default function DecisionMaker() {
                       Add Option
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Configuration</CardTitle>
-                  <CardDescription>
-                    Provide more context for a better recommendation.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-6">
-                  <FormField
+                  <Separator />
+                   <FormField
                     control={form.control}
                     name="userContext"
                     render={({ field }) => (
@@ -211,7 +201,7 @@ export default function DecisionMaker() {
                     )}
                   />
                 </CardContent>
-                <CardFooter>
+                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
