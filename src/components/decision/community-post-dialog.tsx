@@ -12,6 +12,10 @@ import { Button } from '@/components/ui/button';
 import type { DecisionResult } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { useUser, useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 type CommunityPostDialogProps = {
   open: boolean;
@@ -29,11 +33,51 @@ export function CommunityPostDialog({
   decision,
   decisionResult,
 }: CommunityPostDialogProps) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const handlePost = () => {
-    // TODO: Implement posting to community (requires auth and Firestore)
-    console.log('Posting to community...');
-    onOpenChange(false);
+  const handlePost = async () => {
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to post to the community.',
+      });
+      return;
+    }
+
+    try {
+      const postsCollection = collection(firestore, 'community-posts');
+      await addDoc(postsCollection, {
+        author: {
+          name: user.displayName,
+          avatarUrl: user.photoURL,
+          uid: user.uid,
+        },
+        subject: decision.subject,
+        options: decision.options,
+        aiRecommendation: decisionResult.recommendation,
+        aiJustification: decisionResult.justification,
+        createdAt: serverTimestamp(),
+        commentCount: 0,
+      });
+
+      toast({
+        title: 'Success!',
+        description: 'Your decision has been posted to the community.',
+      });
+      onOpenChange(false);
+      router.push('/community');
+    } catch (error) {
+      console.error('Error posting to community:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description: 'Could not post your decision. Please try again.',
+      });
+    }
   };
 
   return (

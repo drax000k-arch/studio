@@ -11,13 +11,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, ThumbsUp } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 type PostCardProps = {
   post: CommunityPost;
 };
 
 export function PostCard({ post }: PostCardProps) {
+  const postedAt = post.createdAt ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) : 'just now';
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -31,7 +34,7 @@ export function PostCard({ post }: PostCardProps) {
             <CardDescription className="flex items-center gap-2 text-xs">
               <span>Posted by {post.author.name}</span>
               <span className="text-muted-foreground/50">•</span>
-              <span>{post.postedAt}</span>
+              <span>{postedAt}</span>
             </CardDescription>
           </div>
         </div>

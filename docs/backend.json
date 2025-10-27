@@ -1,0 +1,69 @@
+{
+    "entities": {
+        "UserProfile": {
+            "title": "User Profile",
+            "description": "Represents a user's profile in the application.",
+            "type": "object",
+            "properties": {
+                "uid": {
+                    "type": "string",
+                    "description": "The user's unique ID."
+                },
+                "displayName": {
+                    "type": "string",
+                    "description": "The user's display name."
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The user's email address."
+                },
+                "photoURL": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL of the user's profile picture."
+                }
+            },
+            "required": ["uid", "displayName", "email"]
+        },
+        "CommunityPost": {
+            "title": "Community Post",
+            "description": "A decision post shared with the community.",
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "object",
+                    "properties": {
+                        "uid": { "type": "string" },
+                        "name": { "type": "string" },
+                        "avatarUrl": { "type": "string", "format": "uri" }
+                    },
+                    "required": ["uid", "name"]
+                },
+                "subject": { "type": "string" },
+                "options": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                },
+                "aiRecommendation": { "type": "string" },
+                "aiJustification": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "commentCount": { "type": "number" }
+            },
+            "required": ["author", "subject", "options", "aiRecommendation", "createdAt"]
+        }
+    },
+    "auth": {
+        "providers": ["google.com"]
+    },
+    "firestore": {
+        "/users/{userId}": {
+            "schema": { "$ref": "#/entities/UserProfile" },
+            "description": "Stores public information about a user."
+        },
+        "/community-posts/{postId}": {
+            "schema": { "$ref": "#/entities/CommunityPost" },
+            "description": "Collection of all community posts."
+        }
+    }
+}
