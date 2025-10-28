@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 function PostCard({ post }: { post: CommunityPost }) {
@@ -47,8 +47,12 @@ export default function CommunityPage() {
   const { toast } = useToast();
   const [newPost, setNewPost] = useState('');
 
-  const postsCollection = firestore ? query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc')) : null;
-  const { data: posts, loading } = useCollection<CommunityPost>(postsCollection as any);
+  const postsCollection = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc'));
+  }, [firestore]);
+  
+  const { data: posts, loading } = useCollection<CommunityPost>(postsCollection);
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
