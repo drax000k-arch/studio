@@ -48,7 +48,6 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The useEffect below will handle the redirect
     } catch (error) {
       console.error('Error signing in with Google', error);
     }
@@ -70,20 +69,18 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm border-0 shadow-2xl shadow-primary/10">
-      <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <BrainCircuit className="size-8" />
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Advisify AI</CardTitle>
-          <CardDescription>Sign in to get AI-powered advice.</CardDescription>
+      <div className="w-10 h-10 mb-6 rounded-full bg-gradient-to-tr from-[#4A6CF7] to-[#7B5CFF] flex items-center justify-center text-white font-bold text-2xl">A</div>
+      <Card className="w-full max-w-sm border-0 bg-transparent">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold tracking-tight">Welcome to Advisify</CardTitle>
+          <CardDescription>Sign in to continue to your dashboard.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={handleSignIn} className="w-full h-11 text-base font-semibold">
+          <Button onClick={handleSignIn} className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground">
             <GoogleIcon className="mr-3" />
             Sign in with Google
           </Button>
-           <Button variant="link" className="w-full" asChild>
+           <Button variant="link" className="w-full text-slate-500" asChild>
             <Link href="/">Go back to Dashboard</Link>
           </Button>
         </CardContent>

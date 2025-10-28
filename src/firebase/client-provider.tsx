@@ -22,15 +22,13 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const [firebase, setFirebase] = useState<FirebaseServices | null>(null);
 
   useEffect(() => {
-    // initialize firebase on the client
     setFirebase(initializeFirebase());
   }, []);
 
   if (!firebase) {
-    // show a loader or fallback while firebase is initializing
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin" />
+      <div className="flex h-screen w-full items-center justify-center bg-[#F9FAFB]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }

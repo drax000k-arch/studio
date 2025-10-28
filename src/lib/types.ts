@@ -1,7 +1,3 @@
-export type DecisionOption = {
-  id: string;
-  value: string;
-};
 
 export type Decision = {
   id: string;

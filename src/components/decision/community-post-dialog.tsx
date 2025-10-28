@@ -106,7 +106,7 @@ export function CommunityPostDialog({
             <h4 className="text-sm font-semibold mb-2">AI Recommendation</h4>
             <Badge
               variant="secondary"
-              className="bg-accent/20 text-accent-foreground border-accent/30"
+              className="bg-primary/10 text-primary border-primary/20"
             >
               {decisionResult.recommendation}
             </Badge>
@@ -119,7 +119,7 @@ export function CommunityPostDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" onClick={handlePost}>
+          <Button type="submit" onClick={handlePost} className="bg-primary hover:bg-primary/90 text-primary-foreground">
             Post
           </Button>
         </DialogFooter>

@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AppLayout } from '@/components/layout/app-layout';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body' });
@@ -19,13 +18,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
-      <body className={`${inter.variable} font-body antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} font-body antialiased bg-[#F9FAFB] text-[#1E1E1E]`}>
         <FirebaseClientProvider>
-          <SidebarProvider>
-            <AppSidebar />
+          <AppLayout>
             {children}
-          </SidebarProvider>
+          </AppLayout>
         </FirebaseClientProvider>
         <Toaster />
       </body>
