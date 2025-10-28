@@ -4,10 +4,9 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser, useFirebaseApp } from '@/firebase';
 import { useEffect } from 'react';
 import { BrainCircuit, Loader2 } from 'lucide-react';
-import { useFirebaseApp } from '@/firebase';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -48,7 +47,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      // The useEffect below will handle the redirect
     } catch (error) {
       console.error('Error signing in with Google', error);
     }

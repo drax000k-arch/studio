@@ -2,8 +2,6 @@
 
 import {
   type ReactNode,
-  createContext,
-  useContext,
   useState,
   useEffect,
 } from 'react';
@@ -12,22 +10,16 @@ import { FirebaseProvider } from '@/firebase/provider';
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 
-type FirebaseContextValue = {
-  firebaseApp: FirebaseApp | null;
-  auth: Auth | null;
-  firestore: Firestore | null;
+type FirebaseServices = {
+  firebaseApp: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore;
 };
 
-const FirebaseClientContext = createContext<FirebaseContextValue>({
-  firebaseApp: null,
-  auth: null,
-  firestore: null,
-});
-
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [firebase, setFirebase] =
-    useState<ReturnType<typeof initializeFirebase> | null>(null);
+  const [firebase, setFirebase] = useState<FirebaseServices | null>(null);
 
   useEffect(() => {
     // initialize firebase on the client
@@ -36,20 +28,20 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
   if (!firebase) {
     // show a loader or fallback while firebase is initializing
-    return null; 
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <FirebaseClientContext.Provider value={firebase}>
-      <FirebaseProvider
-        firebaseApp={firebase.firebaseApp}
-        auth={firebase.auth}
-        firestore={firebase.firestore}
-      >
-        {children}
-      </FirebaseProvider>
-    </FirebaseClientContext.Provider>
+    <FirebaseProvider
+      firebaseApp={firebase.firebaseApp}
+      auth={firebase.auth}
+      firestore={firebase.firestore}
+    >
+      {children}
+    </FirebaseProvider>
   );
 }
-
-export const useFirebaseClient = () => useContext(FirebaseClientContext);
