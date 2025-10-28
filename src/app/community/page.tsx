@@ -12,11 +12,9 @@ import { getCommunityPosts } from '@/lib/placeholder-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 function PostCard({ post }: { post: CommunityPost }) {
-  // Use a mock date if createdAt is not available for placeholder data
-  const postedAt = post.createdAt 
-    ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) 
-    : post.id === '1' ? '2 days ago' : post.id === '2' ? '5 days ago' : '1 week ago';
-
+  const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date(post.postedAt || Date.now());
+  const postedAt = formatDistanceToNow(postedAtDate, { addSuffix: true });
+  
   const authorAvatar = post.author.avatarUrl || PlaceHolderImages.find(img => img.id === `avatar${post.id}`)?.imageUrl;
 
   return (

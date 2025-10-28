@@ -43,15 +43,15 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-3 text-center shadow-sm">
-          <div className="font-semibold">0</div>
+          <div className="font-semibold">12</div>
           <div className="text-xs text-slate-400">Advice Given</div>
         </div>
         <div className="bg-white rounded-xl p-3 text-center shadow-sm">
-          <div className="font-semibold">0</div>
+          <div className="font-semibold">5</div>
           <div className="text-xs text-slate-400">Posts</div>
         </div>
         <div className="bg-white rounded-xl p-3 text-center shadow-sm">
-          <div className="font-semibold">0</div>
+          <div className="font-semibold">87</div>
           <div className="text-xs text-slate-400">Helpful Votes</div>
         </div>
       </div>

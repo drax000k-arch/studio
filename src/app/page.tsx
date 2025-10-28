@@ -1,24 +1,20 @@
 'use client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { CommunityPost, Decision } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/firebase';
 import { ThumbUp, ThumbDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import DecisionMaker from '@/components/decision/decision-maker';
 import { useState } from 'react';
+import { getCommunityPosts } from '@/lib/placeholder-data';
 
 
 function CommunityOpinions() {
-  const firestore = useFirestore();
-  const postsQuery = firestore ? query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc'), limit(2)) : null;
-  const { data: posts, loading } = useCollection<CommunityPost>(postsQuery);
+  const posts = getCommunityPosts().slice(0, 2);
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -27,8 +23,7 @@ function CommunityOpinions() {
         <div className="text-xs text-slate-400">Trending</div>
       </div>
       <div className="mt-3 space-y-2">
-        {loading ? <> <Skeleton className="h-12 w-full"/> <Skeleton className="h-12 w-full"/> </> : 
-        posts?.map(post => (
+        {posts.map(post => (
           <div key={post.id} className="flex items-start gap-3">
             <Avatar className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
               <AvatarImage src={post.author.avatarUrl} />
@@ -59,7 +54,10 @@ function DecisionTracker() {
         <div className="text-xs text-slate-400">Recent</div>
       </div>
       <div className="mt-3 space-y-3">
-       {loading ? <> <Skeleton className="h-10 w-full"/> <Skeleton className="h-10 w-full"/> </> :
+       {loading ? <>
+        <div className="h-10 w-full animate-pulse rounded-md bg-muted"/>
+        <div className="h-10 w-full animate-pulse rounded-md bg-muted"/>
+       </> :
         decisions?.map(decision => (
           <div key={decision.id} className="flex items-center justify-between">
             <div>

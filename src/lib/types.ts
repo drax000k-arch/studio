@@ -19,12 +19,13 @@ export type CommunityPost = {
   author: {
     name: string;
     avatarUrl: string;
-    uid: string;
+    uid?: string;
   };
   subject: string;
   options: string[];
   aiRecommendation: string;
   aiJustification: string;
-  createdAt: string;
+  createdAt?: string;
+  postedAt?: string;
   commentCount: number;
 };
