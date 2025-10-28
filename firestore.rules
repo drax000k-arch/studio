@@ -1,28 +1,106 @@
+/**
+ * @file Firestore Security Rules
+ * @core_philosophy This ruleset enforces a user-ownership model for user profiles and decisions, while allowing public read access to community posts.
+ * @data_structure
+ * - /users/{userId}: Stores public user profiles. Accessible only to the user themselves for writes.
+ * - /community-posts/{postId}: Stores community posts. Publicly readable, but only the author can modify or delete.
+ * - /users/{userId}/decisions/{decisionId}: Stores user-specific decisions. Only accessible to the user themselves.
+ * @key_security_decisions
+ * - User listing is disallowed.
+ * - Community posts are publicly readable but only modifiable by the author.
+ * @denormalization_for_authorization
+ * - Community posts require an `author.uid` field to enforce owner-only writes.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // USERS
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user creates their own profile.
+     * @deny (create) - Authenticated user attempts to create a profile with a different user ID.
+     * @allow (get) - Authenticated user reads their own profile.
+     * @deny (get) - Any user tries to read any user profile.
+     * @allow (update) - Authenticated user updates their own profile.
+     * @deny (update) - Authenticated user attempts to update a different user's profile.
+     * @allow (delete) - Authenticated user deletes their own profile.
+     * @deny (delete) - Authenticated user attempts to delete a different user's profile.
+     * @principle Enforces document ownership for writes.
+     */
     match /users/{userId} {
-      allow read;
-      allow create, update: if isSignedIn() && isOwner(userId);
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isExistingOwner(userId);
     }
 
-    // COMMUNITY POSTS
+    /**
+     * @description Controls access to community post documents.
+     * @path /community-posts/{postId}
+     * @allow (get, list) - Any user can read any community post.
+     * @allow (create) - Authenticated user creates a new community post.
+     * @deny (create) - Unauthenticated user tries to create a post.
+     * @allow (update) - The author of the post updates it.
+     * @deny (update) - Non-author attempts to update the post.
+     * @allow (delete) - The author of the post deletes it.
+     * @deny (delete) - Non-author attempts to delete the post.
+     * @principle Public read access with owner-only writes.
+     */
     match /community-posts/{postId} {
-      allow read;
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && isOwner(resource.data.author.uid);
+      function isPostAuthor(authorId) {
+        return request.auth != null && request.auth.uid == authorId;
+      }
+
+      function isExistingPostAuthor(authorId) {
+        return isPostAuthor(authorId) && resource != null;
+      }
+
+      allow get, list: if true;
+
+      allow create: if request.auth != null && request.resource.data.author.uid == request.auth.uid;
+      allow update: if isExistingPostAuthor(resource.data.author.uid);
+      allow delete: if isExistingPostAuthor(resource.data.author.uid);
+    }
+
+    /**
+     * @description Controls access to decision documents nested under a user.
+     * @path /users/{userId}/decisions/{decisionId}
+     * @allow (create) - Authenticated user creates a decision under their own user ID.
+     * @deny (create) - Authenticated user attempts to create a decision under a different user ID.
+     * @allow (get) - Authenticated user reads a decision under their own user ID.
+     * @deny (get) - Any user tries to read any user's decision.
+     * @allow (update) - Authenticated user updates a decision under their own user ID.
+     * @deny (update) - Authenticated user attempts to update a decision under a different user's ID.
+     * @allow (delete) - Authenticated user deletes a decision under their own user ID.
+     * @deny (delete) - Authenticated user attempts to delete a decision under a different user's ID.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/decisions/{decisionId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
   }
 }

@@ -6,6 +6,8 @@ import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
 import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -21,6 +23,24 @@ const decisionFormSchema = z.object({
   responseLength: z.enum(['short', 'long']),
   userId: z.string().optional(),
 });
+
+function saveDecision(userId: string, decisionData: any) {
+    const { firestore } = initializeFirebase();
+    const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
+    
+    addDoc(decisionsCollection, {
+        ...decisionData,
+        createdAt: serverTimestamp(),
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: decisionsCollection.path,
+            operation: 'create',
+            requestResourceData: decisionData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+}
+
 
 export async function getAiDecision(
   data: z.infer<typeof decisionFormSchema>
@@ -43,36 +63,19 @@ export async function getAiDecision(
       userContext: userContext ?? 'No personal context provided.',
     });
 
-    if (!recommendationResult.recommendation || !options.includes(recommendationResult.recommendation)) {
-      console.error("AI recommendation was invalid:", recommendationResult.recommendation);
-      // Even if the recommendation is invalid, we can try to ask for justification on the first option as a fallback.
-      // A better solution would be to retry the recommendation.
-      const fallbackRecommendation = options[0];
-      const justificationResult = await generateDecisionJustification({
-        subject,
-        options: options,
-        aiRecommendation: fallbackRecommendation,
-        responseLength,
-      });
+    let aiRecommendation = recommendationResult.recommendation;
 
-      const decisionResult = {
-        recommendation: fallbackRecommendation,
-        justification: justificationResult.justification || "The AI could not provide a specific justification for its fallback choice.",
-      };
-      
-      return {
-        status: 'error',
-        message: 'The AI provided an unexpected recommendation, but here is a default analysis.',
-        result: decisionResult
-      };
+    // CRITICAL FIX: Validate that the AI's recommendation is one of the provided options.
+    // If not, use the first option as a safe fallback.
+    if (!options.includes(aiRecommendation)) {
+      console.warn(`AI returned an invalid option: "${aiRecommendation}". Falling back to the first option.`);
+      aiRecommendation = options[0];
     }
-    
-    const aiRecommendation = recommendationResult.recommendation;
     
     const justificationResult = await generateDecisionJustification({
       subject,
       options: options,
-      aiRecommendation,
+      aiRecommendation, // Use the validated or fallback recommendation
       responseLength,
     });
     
@@ -86,21 +89,12 @@ export async function getAiDecision(
     };
 
     if (userId) {
-      try {
-        const { firestore } = initializeFirebase();
-        const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
-        await addDoc(decisionsCollection, {
+       saveDecision(userId, {
           subject,
           options,
           userContext,
           ...decisionResult,
-          createdAt: serverTimestamp(),
-        });
-      } catch (dbError) {
-        console.error("Firestore write failed:", dbError);
-        // We don't want to fail the whole operation if just the save fails.
-        // The user still gets their advice.
-      }
+       });
     }
 
     return {
@@ -111,16 +105,17 @@ export async function getAiDecision(
     console.error(error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     
-    if (errorMessage.includes('503')) {
+    // Improved error message for service availability
+    if (errorMessage.includes('503') || errorMessage.includes('unavailable')) {
        return {
         status: 'error',
-        message: "We're sorry, but the AI service is currently experiencing high traffic. Please try again in a few moments.",
+        message: "We're sorry, but the AI service is currently experiencing high traffic or is unavailable. Please try again in a few moments.",
       };
     }
 
     return {
       status: 'error',
-      message: `An error occurred while getting your advice. Please try again.`,
+      message: `An error occurred while getting your advice. Please check your connection and try again.`,
     };
   }
 }

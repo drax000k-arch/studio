@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 import { onSnapshot } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 // Helper to create a stable query key
 const createQueryKey = (query: Query): string => {
@@ -39,8 +42,12 @@ export function useCollection<T>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
-        console.error(err);
-        setError(err);
+        const permissionError = new FirestorePermissionError({
+          path: (query as any)._query.path.toString(),
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setError(err); // Still set local error for component-level handling if needed
         setLoading(false);
       }
     );

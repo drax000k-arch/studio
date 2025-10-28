@@ -16,6 +16,8 @@ import { useUser, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type CommunityPostDialogProps = {
   open: boolean;
@@ -48,36 +50,44 @@ export function CommunityPostDialog({
       return;
     }
 
-    try {
-      const postsCollection = collection(firestore, 'community-posts');
-      await addDoc(postsCollection, {
-        author: {
-          name: user.displayName,
-          avatarUrl: user.photoURL,
-          uid: user.uid,
-        },
-        subject: decision.subject,
-        options: decision.options,
-        aiRecommendation: decisionResult.recommendation,
-        aiJustification: decisionResult.justification,
-        createdAt: serverTimestamp(),
-        commentCount: 0,
-      });
+    const postsCollection = collection(firestore, 'community-posts');
+    const postData = {
+      author: {
+        name: user.displayName,
+        avatarUrl: user.photoURL,
+        uid: user.uid,
+      },
+      subject: decision.subject,
+      options: decision.options,
+      aiRecommendation: decisionResult.recommendation,
+      aiJustification: decisionResult.justification,
+      createdAt: serverTimestamp(),
+      commentCount: 0,
+    };
 
-      toast({
-        title: 'Success!',
-        description: 'Your decision has been posted to the community.',
+    addDoc(postsCollection, postData)
+      .then(() => {
+        toast({
+          title: 'Success!',
+          description: 'Your decision has been posted to the community.',
+        });
+        onOpenChange(false);
+        router.push('/community');
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: postsCollection.path,
+            operation: 'create',
+            requestResourceData: postData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // Also show a toast to the user
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong.",
+          description: "Could not post your decision. Please check your permissions and try again.",
+        });
       });
-      onOpenChange(false);
-      router.push('/community');
-    } catch (error) {
-      console.error('Error posting to community:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'Could not post your decision. Please try again.',
-      });
-    }
   };
 
   return (

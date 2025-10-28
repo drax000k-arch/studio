@@ -10,8 +10,11 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getCommunityPosts } from '@/lib/placeholder-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function PostCard({ post }: { post: CommunityPost }) {
+  // Ensure createdAt is a valid date, defaulting to now if it's not.
   const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date();
   const postedAt = formatDistanceToNow(postedAtDate, { addSuffix: true });
   
@@ -50,6 +53,7 @@ export default function CommunityPage() {
   const { toast } = useToast();
   const [newPost, setNewPost] = useState('');
   
+  // Use stable placeholder data to prevent flickering
   const posts = getCommunityPosts();
 
   const handlePost = async () => {
@@ -62,8 +66,8 @@ export default function CommunityPage() {
       return;
     }
     
-    try {
-      await addDoc(collection(firestore, 'community-posts'), {
+    const postsCollection = collection(firestore, 'community-posts');
+    const postData = {
          author: {
             name: user.displayName || 'Anonymous',
             avatarUrl: user.photoURL || '',
@@ -75,17 +79,26 @@ export default function CommunityPage() {
           aiJustification: 'N/A',
           createdAt: serverTimestamp(),
           commentCount: 0,
+      };
+
+      addDoc(postsCollection, postData)
+      .then(() => {
+        setNewPost('');
+        toast({ title: 'Posted to community!' });
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: postsCollection.path,
+            operation: 'create',
+            requestResourceData: postData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: "Could not post your decision. Please try again.",
+        });
       });
-      setNewPost('');
-      toast({ title: 'Posted to community!' });
-    } catch(error) {
-       console.error("Error posting to community:", error);
-       toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'Could not post your decision. Please try again.',
-      });
-    }
   };
 
 
