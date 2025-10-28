@@ -43,8 +43,9 @@ export async function getAiDecision(
       userContext: userContext ?? 'No personal context provided.',
     });
 
-    if (!recommendationResult.recommendation) {
-      throw new Error("Failed to generate a recommendation.");
+    if (!recommendationResult.recommendation || !options.includes(recommendationResult.recommendation)) {
+      console.error("AI recommendation was invalid:", recommendationResult.recommendation);
+      throw new Error("The AI returned an invalid recommendation. Please try again.");
     }
     
     const aiRecommendation = recommendationResult.recommendation;
@@ -83,9 +84,10 @@ export async function getAiDecision(
     };
   } catch (error) {
     console.error(error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
       status: 'error',
-      message: 'An unexpected error occurred while making a decision. Please try again.',
+      message: `${errorMessage} Please try again.`,
     };
   }
 }
