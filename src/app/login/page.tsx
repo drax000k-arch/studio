@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { BrainCircuit, Loader2 } from 'lucide-react';
 import { useFirebaseApp } from '@/firebase';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -69,15 +69,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome to Advisify AI</CardTitle>
-          <CardDescription>Sign in to continue to the community.</CardDescription>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm border-0 shadow-2xl shadow-primary/10">
+      <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <BrainCircuit className="size-8" />
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight">Advisify AI</CardTitle>
+          <CardDescription>Sign in to get AI-powered advice.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleSignIn} className="w-full" variant="outline">
-            <GoogleIcon className="mr-2" />
+          <Button onClick={handleSignIn} className="w-full h-11 text-base font-semibold">
+            <GoogleIcon className="mr-3" />
             Sign in with Google
           </Button>
         </CardContent>

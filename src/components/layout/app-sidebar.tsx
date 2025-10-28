@@ -46,17 +46,17 @@ export function AppSidebar() {
   const displayedMenuItems = menuItems.filter(item => !item.requiresAuth || user);
 
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="offcanvas" variant="sidebar">
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="size-6 text-primary" />
+        <div className="flex items-center gap-2.5">
+          <BrainCircuit className="size-7 text-primary" />
           <div
             className={cn(
               'overflow-hidden transition-all duration-300',
               'group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0'
             )}
           >
-            <h2 className="font-semibold text-lg">Advisify AI</h2>
+            <h2 className="font-bold text-xl tracking-tight">Advisify AI</h2>
           </div>
         </div>
       </SidebarHeader>
@@ -70,6 +70,7 @@ export function AppSidebar() {
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={item.label}
+                size="lg"
               >
                 <item.icon />
                 <span>{item.label}</span>
@@ -82,7 +83,7 @@ export function AppSidebar() {
       <SidebarFooter>
         {user ? (
           <div className="flex items-center gap-3 p-2">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-9 w-9">
               <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User'} />
               <AvatarFallback>{user.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
             </Avatar>
@@ -93,7 +94,7 @@ export function AppSidebar() {
             <Button
                 variant="ghost"
                 size="icon"
-                className="ml-auto shrink-0 group-data-[collapsible=icon]:hidden"
+                className="ml-auto shrink-0 group-data-[collapsible=icon]:hidden rounded-full"
                 onClick={() => signOut(auth)}
                 title="Log out"
               >
@@ -103,7 +104,7 @@ export function AppSidebar() {
         ) : (
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton as={Link} href="/login" tooltip="Log In">
+              <SidebarMenuButton as={Link} href="/login" tooltip="Log In" size="lg">
                 <LogIn />
                 <span>Log In</span>
               </SidebarMenuButton>
