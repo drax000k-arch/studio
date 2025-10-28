@@ -29,10 +29,11 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '../ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { CommunityPostDialog } from './community-post-dialog';
+import { useUser } from '@/firebase';
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Subject must be at least 3 characters long.' }),
-  options: z.array(z.object({ value: z.string().min(1, { message: 'Option cannot be empty.' }) }))
+  options: z.array(z.string().min(1, { message: 'Option cannot be empty.' }))
     .min(2, { message: 'Please provide at least two options.' }),
   userContext: z.string().optional(),
   responseLength: z.enum(['short', 'long']),
@@ -45,12 +46,13 @@ export default function DecisionMaker() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCommunityDialogOpen, setIsCommunityDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
 
   const form = useForm<DecisionFormValues>({
     resolver: zodResolver(decisionFormSchema),
     defaultValues: {
       subject: '',
-      options: [{ value: '' }, { value: '' }],
+      options: ['', ''],
       userContext: '',
       responseLength: 'long',
     },
@@ -64,7 +66,7 @@ export default function DecisionMaker() {
   const onSubmit = async (data: DecisionFormValues) => {
     setIsLoading(true);
     setState({ status: 'idle' });
-    const result = await getAiDecision(data);
+    const result = await getAiDecision({ ...data, userId: user?.uid });
     setState(result);
     setIsLoading(false);
   };
@@ -117,12 +119,12 @@ export default function DecisionMaker() {
                           key={field.id}
                           control={form.control}
                           name={`options.${index}`}
-                          render={() => (
+                          render={({ field }) => (
                             <FormItem className="flex items-center gap-2">
                               <FormControl>
                                 <Input
                                   placeholder={`Option ${index + 1}`}
-                                  {...form.register(`options.${index}.value` as const)}
+                                  {...field}
                                 />
                               </FormControl>
                               <Button
@@ -147,7 +149,7 @@ export default function DecisionMaker() {
                       variant="outline"
                       size="sm"
                       className="mt-3"
-                      onClick={() => append({ value: '' })}
+                      onClick={() => append('')}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Option
@@ -261,7 +263,7 @@ export default function DecisionMaker() {
                 </div>
               )}
             </CardContent>
-            {state.status === 'success' && (
+            {state.status === 'success' && user && (
               <CardFooter>
                 <Button variant="outline" className="w-full" onClick={() => setIsCommunityDialogOpen(true)}>
                   <Share2 className="mr-2 size-4" />
@@ -278,7 +280,7 @@ export default function DecisionMaker() {
           onOpenChange={setIsCommunityDialogOpen}
           decision={{
             subject: decisionData.subject,
-            options: decisionData.options.map(o => o.value),
+            options: decisionData.options,
           }}
           decisionResult={state.result}
         />

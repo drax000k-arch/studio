@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BrainCircuit, Home, LogIn, LogOut, Users } from 'lucide-react';
+import { BrainCircuit, Home, LogIn, LogOut, Users, History } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -30,12 +30,20 @@ const menuItems = [
     label: 'Community',
     icon: Users,
   },
+   {
+    href: '/history',
+    label: 'History',
+    icon: History,
+    requiresAuth: true,
+  },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const auth = getAuth();
+
+  const displayedMenuItems = menuItems.filter(item => !item.requiresAuth || user);
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -55,7 +63,7 @@ export function AppSidebar() {
       <SidebarSeparator />
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {displayedMenuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 as={Link}

@@ -51,6 +51,20 @@
                 "commentCount": { "type": "number" }
             },
             "required": ["author", "subject", "options", "aiRecommendation", "createdAt"]
+        },
+        "Decision": {
+            "title": "Decision",
+            "description": "Represents a decision made by a user.",
+            "type": "object",
+            "properties": {
+                "subject": { "type": "string" },
+                "options": { "type": "array", "items": { "type": "string" } },
+                "userContext": { "type": "string" },
+                "recommendation": { "type": "string" },
+                "justification": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" }
+            },
+            "required": ["subject", "options", "recommendation", "justification", "createdAt"]
         }
     },
     "auth": {
@@ -64,6 +78,10 @@
         "/community-posts/{postId}": {
             "schema": { "$ref": "#/entities/CommunityPost" },
             "description": "Collection of all community posts."
+        },
+        "/users/{userId}/decisions/{decisionId}": {
+            "schema": { "$ref": "#/entities/Decision" },
+            "description": "Stores a user's past decisions."
         }
     }
 }

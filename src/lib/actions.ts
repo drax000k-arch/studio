@@ -4,6 +4,8 @@ import { generateDecisionJustification } from '@/ai/flows/generate-decision-just
 import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
+import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -13,10 +15,11 @@ export type ActionState = {
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Subject must be at least 3 characters long.' }),
-  options: z.array(z.object({ value: z.string().min(1, { message: 'Option cannot be empty.' }) }))
+  options: z.array(z.string().min(1, { message: 'Option cannot be empty.' }))
     .min(2, { message: 'Please provide at least two options.' }),
   userContext: z.string().optional(),
   responseLength: z.enum(['short', 'long']),
+  userId: z.string().optional(),
 });
 
 export async function getAiDecision(
@@ -31,13 +34,12 @@ export async function getAiDecision(
     };
   }
 
-  const { subject, options, userContext, responseLength } = validation.data;
-  const optionValues = options.map(o => o.value);
+  const { subject, options, userContext, responseLength, userId } = validation.data;
 
   try {
     const recommendationResult = await generateDecisionRecommendation({
       subject,
-      options: optionValues,
+      options: options,
       userContext: userContext ?? 'No personal context provided.',
     });
 
@@ -49,7 +51,7 @@ export async function getAiDecision(
     
     const justificationResult = await generateDecisionJustification({
       subject,
-      options: optionValues,
+      options: options,
       aiRecommendation,
       responseLength,
     });
@@ -58,12 +60,26 @@ export async function getAiDecision(
         throw new Error("Failed to generate justification.")
     }
 
+    const decisionResult = {
+      recommendation: aiRecommendation,
+      justification: justificationResult.justification,
+    };
+
+    if (userId) {
+      const { firestore } = initializeFirebase();
+      const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
+      await addDoc(decisionsCollection, {
+        subject,
+        options,
+        userContext,
+        ...decisionResult,
+        createdAt: serverTimestamp(),
+      });
+    }
+
     return {
       status: 'success',
-      result: {
-        recommendation: aiRecommendation,
-        justification: justificationResult.justification,
-      },
+      result: decisionResult,
     };
   } catch (error) {
     console.error(error);

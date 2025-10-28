@@ -4,8 +4,13 @@ export type DecisionOption = {
 };
 
 export type Decision = {
+  id: string;
   subject: string;
-  options: DecisionOption[];
+  options: string[];
+  userContext?: string;
+  recommendation: string;
+  justification: string;
+  createdAt: string;
 };
 
 export type DecisionResult = {

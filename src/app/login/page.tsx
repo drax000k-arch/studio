@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useFirebaseApp } from '@/firebase';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -37,14 +38,17 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 export default function LoginPage() {
-  const auth = getAuth();
-  const provider = new GoogleAuthProvider();
+  const app = useFirebaseApp();
   const router = useRouter();
   const { user, loading } = useUser();
 
   const handleSignIn = async () => {
+    if (!app) return;
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      router.push('/');
     } catch (error) {
       console.error('Error signing in with Google', error);
     }
