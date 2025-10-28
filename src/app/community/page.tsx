@@ -1,25 +1,30 @@
 'use client';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import type { CommunityPost } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getCommunityPosts } from '@/lib/placeholder-data';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 function PostCard({ post }: { post: CommunityPost }) {
-  const postedAt = post.createdAt ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) : 'just now';
+  // Use a mock date if createdAt is not available for placeholder data
+  const postedAt = post.createdAt 
+    ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) 
+    : post.id === '1' ? '2 days ago' : post.id === '2' ? '5 days ago' : '1 week ago';
+
+  const authorAvatar = post.author.avatarUrl || PlaceHolderImages.find(img => img.id === `avatar${post.id}`)?.imageUrl;
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={post.author.avatarUrl} alt={post.author.name} />
+            <AvatarImage src={authorAvatar} alt={post.author.name} />
             <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
@@ -46,13 +51,9 @@ export default function CommunityPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState('');
-
-  const postsCollection = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
   
-  const { data: posts, loading } = useCollection<CommunityPost>(postsCollection);
+  // Use placeholder data to prevent flickering and show a populated UI
+  const posts = getCommunityPosts();
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
@@ -64,23 +65,30 @@ export default function CommunityPage() {
       return;
     }
     
-    // A bit of a simplification: we'll create a dummy post from the text.
-    // A real app would have a more structured input.
-    await addDoc(collection(firestore, 'community-posts'), {
-       author: {
-          name: user.displayName,
-          avatarUrl: user.photoURL,
-          uid: user.uid,
-        },
-        subject: newPost,
-        options: ['Yes', 'No'],
-        aiRecommendation: 'N/A',
-        aiJustification: 'N/A',
-        createdAt: serverTimestamp(),
-        commentCount: 0,
-    });
-    setNewPost('');
-    toast({ title: 'Posted to community!' });
+    try {
+      await addDoc(collection(firestore, 'community-posts'), {
+         author: {
+            name: user.displayName || 'Anonymous',
+            avatarUrl: user.photoURL || '',
+            uid: user.uid,
+          },
+          subject: newPost,
+          options: ['Yes', 'No'], // Simplified for now
+          aiRecommendation: 'N/A',
+          aiJustification: 'N/A',
+          createdAt: serverTimestamp(),
+          commentCount: 0,
+      });
+      setNewPost('');
+      toast({ title: 'Posted to community!' });
+    } catch(error) {
+       console.error("Error posting to community:", error);
+       toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description: 'Could not post your decision. Please try again.',
+      });
+    }
   };
 
 
@@ -97,17 +105,9 @@ export default function CommunityPage() {
       </div>
 
       <div className="space-y-3">
-        {loading ? (
-          <>
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-          </>
-        ) : (
-          posts?.map(p => (
+        {posts.map(p => (
             <PostCard key={p.id} post={p} />
-          ))
-        )}
+        ))}
       </div>
     </div>
   );
