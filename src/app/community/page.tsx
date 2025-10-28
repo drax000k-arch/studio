@@ -12,7 +12,7 @@ import { getCommunityPosts } from '@/lib/placeholder-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 function PostCard({ post }: { post: CommunityPost }) {
-  const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date(post.postedAt || Date.now());
+  const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date();
   const postedAt = formatDistanceToNow(postedAtDate, { addSuffix: true });
   
   const authorAvatar = post.author.avatarUrl || PlaceHolderImages.find(img => img.id === `avatar${post.id}`)?.imageUrl;
@@ -50,7 +50,6 @@ export default function CommunityPage() {
   const { toast } = useToast();
   const [newPost, setNewPost] = useState('');
   
-  // Use placeholder data to prevent flickering and show a populated UI
   const posts = getCommunityPosts();
 
   const handlePost = async () => {
