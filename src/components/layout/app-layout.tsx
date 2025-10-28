@@ -21,7 +21,7 @@ function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background/80 to-transparent z-40">
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-lg bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg p-2 flex justify-around items-center ring-1 ring-black/5">
-        {items.map((it, index) => {
+        {items.map((it) => {
            const isActive = pathname === it.id && !it.isCentral;
            if (it.isCentral) {
              return (
