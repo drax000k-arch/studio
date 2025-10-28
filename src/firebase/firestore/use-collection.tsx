@@ -1,13 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 import { onSnapshot } from 'firebase/firestore';
 
+// Helper to create a stable query key
+const createQueryKey = (query: Query): string => {
+  if (query) {
+    // @ts-ignore
+    return query._query.canonicalId;
+  }
+  return '';
+};
 export function useCollection<T>(query: Query<T> | null) {
   const [data, setData] = useState<T[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const queryKey = useMemo(() => query ? createQueryKey(query as Query<DocumentData>) : '', [query]);
 
   useEffect(() => {
     if (!query) {
@@ -36,7 +46,8 @@ export function useCollection<T>(query: Query<T> | null) {
     );
 
     return () => unsubscribe();
-  }, [query]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryKey]);
 
   return { data, loading, error };
 }

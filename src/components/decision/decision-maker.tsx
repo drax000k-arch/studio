@@ -9,19 +9,18 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Sparkles, Trash2, Wand2, Share2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Loader2, Plus, Share2, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import { getAiDecision, type ActionState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '../ui/textarea';
 import { CommunityPostDialog } from './community-post-dialog';
 import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Subject must be at least 3 characters long.' }),
@@ -65,11 +64,7 @@ export default function DecisionMaker() {
   
   useEffect(() => {
     if (state.status === 'error') {
-      toast({
-        variant: 'destructive',
-        title: 'An error occurred',
-        description: state.message,
-      });
+       // The error is now handled by the Alert component below
     }
   }, [state, toast]);
 
@@ -158,6 +153,18 @@ export default function DecisionMaker() {
             <p className="font-medium">The AI is thinking...</p>
             <p className="text-sm">This may take a moment. We're analyzing your options.</p>
           </div>
+        )}
+
+        {state.status === 'error' && state.message && (
+          <Alert variant="destructive">
+            <AlertTitle>An Error Occurred</AlertTitle>
+            <AlertDescription>
+             {state.message.includes('503') 
+               ? "The AI service is currently overloaded. Please try again in a few moments."
+               : state.message
+             }
+            </AlertDescription>
+          </Alert>
         )}
 
         {state.status === 'success' && state.result && (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Home, MessageSquare, BarChart2, User, Plus } from 'lucide-react';
 import { AppHeader } from './app-header';
 import Link from 'next/link';
