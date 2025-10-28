@@ -13,7 +13,7 @@ function BottomNav() {
   const items = [
     { id: '/', icon: <Home size={20} />, label: 'Home' },
     { id: '/community', icon: <MessageSquare size={20} />, label: 'Community' },
-    { id: '/', icon: <Plus size={24} />, label: 'Ask', isCentral: true },
+    { id: '/ask', icon: <Plus size={24} />, label: 'Ask', isCentral: true },
     { id: '/history', icon: <BarChart2 size={20} />, label: 'Tracker' },
     { id: '/profile', icon: <User size={20} />, label: 'Profile' },
   ];
@@ -25,7 +25,7 @@ function BottomNav() {
            const isActive = pathname === it.id && !it.isCentral;
            if (it.isCentral) {
              return (
-                <Link href={it.id} key={it.id} className="-mt-8">
+                <Link href={'/'} key={it.id} className="-mt-8">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#7B5CFF] text-white flex items-center justify-center shadow-lg">
                     <Plus size={28}/>
                   </div>
@@ -57,11 +57,12 @@ function BottomNav() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const noHeaderPaths = ['/login'];
+  const showHeader = !noHeaderPaths.includes(pathname);
 
   return (
     <div className="min-h-screen">
       <div className="max-w-3xl mx-auto pt-2 pb-28">
-        {!noHeaderPaths.includes(pathname) && <AppHeader />}
+        {showHeader && <AppHeader />}
          <AnimatePresence mode="wait">
           <motion.main
             key={pathname}
@@ -69,13 +70,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className={cn('bg-transparent rounded-lg', !noHeaderPaths.includes(pathname) && 'mt-4' )}
+            className={cn('bg-transparent rounded-lg', showHeader && 'mt-4' )}
           >
             {children}
           </motion.main>
         </AnimatePresence>
       </div>
-       {!noHeaderPaths.includes(pathname) && <BottomNav />}
+       {showHeader && <BottomNav />}
     </div>
   );
 }

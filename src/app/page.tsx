@@ -63,8 +63,8 @@ function DecisionTracker() {
       <div className="mt-3 space-y-3">
        {loading ? (
           <>
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-full" />
           </>
         ) : decisions && decisions.length > 0 ? (
           decisions.map(decision => (
@@ -89,7 +89,7 @@ export default function Home() {
   return (
     <div className="space-y-6 p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <motion.button 
+        <motion.div
           initial={{ opacity: 0, y: 6 }} 
           animate={{ opacity: 1, y: 0 }} 
           className="col-span-1 bg-gradient-to-r from-[#4A6CF7] to-[#7B5CFF] text-white rounded-xl p-4 shadow-md flex flex-col justify-between h-28 text-left"
@@ -97,7 +97,7 @@ export default function Home() {
           <div className="text-sm opacity-90">AI Advice</div>
           <div className="text-lg font-semibold">Get instant guidance</div>
           <div className="mt-2 text-xs">Confidence meter, quick summary</div>
-        </motion.button>
+        </motion.div>
         <CommunityOpinions />
         <DecisionTracker />
       </div>
