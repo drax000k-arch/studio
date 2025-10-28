@@ -45,7 +45,26 @@ export async function getAiDecision(
 
     if (!recommendationResult.recommendation || !options.includes(recommendationResult.recommendation)) {
       console.error("AI recommendation was invalid:", recommendationResult.recommendation);
-      throw new Error("The AI returned an invalid recommendation. Please try again.");
+      // Even if the recommendation is invalid, we can try to ask for justification on the first option as a fallback.
+      // A better solution would be to retry the recommendation.
+      const fallbackRecommendation = options[0];
+      const justificationResult = await generateDecisionJustification({
+        subject,
+        options: options,
+        aiRecommendation: fallbackRecommendation,
+        responseLength,
+      });
+
+      const decisionResult = {
+        recommendation: fallbackRecommendation,
+        justification: justificationResult.justification || "The AI could not provide a specific justification for its fallback choice.",
+      };
+      
+      return {
+        status: 'error',
+        message: 'The AI provided an unexpected recommendation, but here is a default analysis.',
+        result: decisionResult
+      };
     }
     
     const aiRecommendation = recommendationResult.recommendation;
@@ -67,15 +86,21 @@ export async function getAiDecision(
     };
 
     if (userId) {
-      const { firestore } = initializeFirebase();
-      const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
-      await addDoc(decisionsCollection, {
-        subject,
-        options,
-        userContext,
-        ...decisionResult,
-        createdAt: serverTimestamp(),
-      });
+      try {
+        const { firestore } = initializeFirebase();
+        const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
+        await addDoc(decisionsCollection, {
+          subject,
+          options,
+          userContext,
+          ...decisionResult,
+          createdAt: serverTimestamp(),
+        });
+      } catch (dbError) {
+        console.error("Firestore write failed:", dbError);
+        // We don't want to fail the whole operation if just the save fails.
+        // The user still gets their advice.
+      }
     }
 
     return {
@@ -85,9 +110,17 @@ export async function getAiDecision(
   } catch (error) {
     console.error(error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+    
+    if (errorMessage.includes('503')) {
+       return {
+        status: 'error',
+        message: "We're sorry, but the AI service is currently experiencing high traffic. Please try again in a few moments.",
+      };
+    }
+
     return {
       status: 'error',
-      message: `${errorMessage} Please try again.`,
+      message: `An error occurred while getting your advice. Please try again.`,
     };
   }
 }

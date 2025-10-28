@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Home, MessageSquare, BarChart2, User, Plus } from 'lucide-react';
 import { AppHeader } from './app-header';
@@ -56,11 +56,12 @@ function BottomNav() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const noHeaderPaths = ['/login'];
 
   return (
     <div className="min-h-screen">
       <div className="max-w-3xl mx-auto pt-2 pb-28">
-        <AppHeader />
+        {!noHeaderPaths.includes(pathname) && <AppHeader />}
          <AnimatePresence mode="wait">
           <motion.main
             key={pathname}
@@ -68,13 +69,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="mt-4 bg-transparent rounded-lg"
+            className={cn('bg-transparent rounded-lg', !noHeaderPaths.includes(pathname) && 'mt-4' )}
           >
             {children}
           </motion.main>
         </AnimatePresence>
       </div>
-      <BottomNav />
+       {!noHeaderPaths.includes(pathname) && <BottomNav />}
     </div>
   );
 }

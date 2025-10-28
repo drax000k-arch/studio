@@ -85,7 +85,6 @@ function DecisionTracker() {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('advice');
 
   return (
     <div className="space-y-6 p-4">
@@ -93,7 +92,6 @@ export default function Home() {
         <motion.button 
           initial={{ opacity: 0, y: 6 }} 
           animate={{ opacity: 1, y: 0 }} 
-          onClick={() => setActiveTab('advice')}
           className="col-span-1 bg-gradient-to-r from-[#4A6CF7] to-[#7B5CFF] text-white rounded-xl p-4 shadow-md flex flex-col justify-between h-28 text-left"
         >
           <div className="text-sm opacity-90">AI Advice</div>
@@ -104,9 +102,7 @@ export default function Home() {
         <DecisionTracker />
       </div>
 
-      {activeTab === 'advice' && (
-        <DecisionMaker />
-      )}
+      <DecisionMaker />
 
       <div className="space-y-2">
         <div className="font-semibold">Quick Topics</div>

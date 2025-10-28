@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useRouter } from 'next/navigation';
 import { useUser, useFirebaseApp } from '@/firebase';
 import { useEffect } from 'react';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -48,6 +48,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      // On successful sign-in, the useEffect below will redirect.
     } catch (error) {
       console.error('Error signing in with Google', error);
     }
@@ -69,8 +70,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-10 h-10 mb-6 rounded-full bg-gradient-to-tr from-[#4A6CF7] to-[#7B5CFF] flex items-center justify-center text-white font-bold text-2xl">A</div>
-      <Card className="w-full max-w-sm border-0 bg-transparent">
+       <Link href="/" className="w-10 h-10 mb-6 rounded-full bg-gradient-to-tr from-[#4A6CF7] to-[#7B5CFF] flex items-center justify-center text-white font-bold text-2xl">A</Link>
+      <Card className="w-full max-w-sm border-0 bg-transparent shadow-none">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold tracking-tight">Welcome to Advisify</CardTitle>
           <CardDescription>Sign in to continue to your dashboard.</CardDescription>
