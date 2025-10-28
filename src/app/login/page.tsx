@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirebaseApp } from '@/firebase';
 import { useEffect } from 'react';
 import { BrainCircuit, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -77,10 +78,13 @@ export default function LoginPage() {
           <CardTitle className="text-3xl font-bold tracking-tight">Advisify AI</CardTitle>
           <CardDescription>Sign in to get AI-powered advice.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button onClick={handleSignIn} className="w-full h-11 text-base font-semibold">
             <GoogleIcon className="mr-3" />
             Sign in with Google
+          </Button>
+           <Button variant="link" className="w-full" asChild>
+            <Link href="/">Go back to Dashboard</Link>
           </Button>
         </CardContent>
       </Card>
