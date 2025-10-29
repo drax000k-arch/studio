@@ -16,8 +16,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type CommunityPostDialogProps = {
   open: boolean;
@@ -64,30 +63,15 @@ export function CommunityPostDialog({
       createdAt: serverTimestamp(),
       commentCount: 0,
     };
-
-    addDoc(postsCollection, postData)
-      .then(() => {
-        toast({
-          title: 'Success!',
-          description: 'Your decision has been posted to the community.',
-        });
-        onOpenChange(false);
-        router.push('/community');
-      })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: postsCollection.path,
-            operation: 'create',
-            requestResourceData: postData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // Also show a toast to the user
-        toast({
-          variant: "destructive",
-          title: "Uh oh! Something went wrong.",
-          description: "Could not post your decision. Please check your permissions and try again.",
-        });
-      });
+    
+    addDocumentNonBlocking(postsCollection, postData);
+    
+    toast({
+      title: 'Success!',
+      description: 'Your decision has been posted to the community.',
+    });
+    onOpenChange(false);
+    router.push('/community');
   };
 
   return (

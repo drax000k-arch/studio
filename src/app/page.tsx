@@ -3,21 +3,21 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 import type { CommunityPost, Decision } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser } from '@/firebase';
-import { ThumbUp, ThumbDown } from 'lucide-react';
 import DecisionMaker from '@/components/decision/decision-maker';
-import { useState } from 'react';
-import { getCommunityPosts } from '@/lib/placeholder-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-
 
 function CommunityOpinions() {
-  const posts = getCommunityPosts().slice(0, 2);
+  const firestore = useFirestore();
+  const postsQuery = useMemoFirebase(() =>
+    firestore ? query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc'), limit(2)) : null
+  , [firestore]);
+
+  const { data: posts, loading } = useCollection<CommunityPost>(postsQuery);
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -28,18 +28,27 @@ function CommunityOpinions() {
         <div className="text-xs text-slate-400">Trending</div>
       </div>
       <div className="mt-3 space-y-2">
-        {posts.map(post => (
-          <div key={post.id} className="flex items-start gap-3">
-            <Avatar className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-               <AvatarImage src={PlaceHolderImages.find(img => img.id === `avatar${post.id}`)?.imageUrl} />
-              <AvatarFallback>{post.author.name?.[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="text-sm font-medium">{post.subject}</div>
-              <div className="text-xs text-slate-400">{post.commentCount || 0} comments</div>
-            </div>
-          </div>
-        ))}
+        {loading ? (
+            <>
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </>
+          ) : posts && posts.length > 0 ? (
+            posts.map(post => (
+              <div key={post.id} className="flex items-start gap-3">
+                <Avatar className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                  <AvatarImage src={post.author.avatarUrl ?? undefined} />
+                  <AvatarFallback>{post.author.name?.[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-sm font-medium">{post.subject}</div>
+                  <div className="text-xs text-slate-400">{post.commentCount || 0} comments</div>
+                </div>
+              </div>
+            ))
+        ) : (
+          <p className="text-sm text-slate-400">No community posts yet.</p>
+        )}
       </div>
     </div>
   );
@@ -49,8 +58,10 @@ function CommunityOpinions() {
 function DecisionTracker() {
    const { user } = useUser();
    const firestore = useFirestore();
-   const decisionsQuery = user && firestore ? query(collection(firestore, `users/${user.uid}/decisions`), orderBy('createdAt', 'desc'), limit(2)) : null;
-   const { data: decisions, loading } = useCollection<Decision>(decisionsQuery);
+   const decisionsQuery = useMemoFirebase(() => 
+    user && firestore ? query(collection(firestore, `users/${user.uid}/decisions`), orderBy('createdAt', 'desc'), limit(2)) : null
+    , [user, firestore]);
+   const { data: decisions, isLoading } = useCollection<Decision>(decisionsQuery);
 
   return (
      <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -61,7 +72,7 @@ function DecisionTracker() {
         <div className="text-xs text-slate-400">Recent</div>
       </div>
       <div className="mt-3 space-y-3">
-       {loading ? (
+       {isLoading ? (
           <>
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />

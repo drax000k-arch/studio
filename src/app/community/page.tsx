@@ -1,6 +1,6 @@
 'use client';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import type { CommunityPost } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,25 +8,24 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getCommunityPosts } from '@/lib/placeholder-data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function PostCard({ post }: { post: CommunityPost }) {
   // Ensure createdAt is a valid date, defaulting to now if it's not.
   const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date();
   const postedAt = formatDistanceToNow(postedAtDate, { addSuffix: true });
   
-  const authorAvatar = post.author.avatarUrl || PlaceHolderImages.find(img => img.id === `avatar${post.id}`)?.imageUrl;
+  const authorAvatar = post.author.avatarUrl;
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={authorAvatar} alt={post.author.name} />
-            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={authorAvatar ?? undefined} alt={post.author.name ?? 'User'} />
+            <AvatarFallback>{post.author.name?.charAt(0) ?? 'U'}</AvatarFallback>
           </Avatar>
           <div>
             <div className="font-medium">{post.author.name}</div>
@@ -53,8 +52,11 @@ export default function CommunityPage() {
   const { toast } = useToast();
   const [newPost, setNewPost] = useState('');
   
-  // Use stable placeholder data to prevent flickering
-  const posts = getCommunityPosts();
+  const postsQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc')) : null,
+    [firestore]
+  );
+  const { data: posts, isLoading } = useCollection<CommunityPost>(postsQuery);
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
@@ -77,28 +79,13 @@ export default function CommunityPage() {
           options: ['Yes', 'No'], // Simplified for now
           aiRecommendation: 'N/A',
           aiJustification: 'N/A',
-          createdAt: serverTimestamp(),
+          createdAt: new Date().toISOString(), // Use ISO string for server timestamp
           commentCount: 0,
       };
-
-      addDoc(postsCollection, postData)
-      .then(() => {
-        setNewPost('');
-        toast({ title: 'Posted to community!' });
-      })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: postsCollection.path,
-            operation: 'create',
-            requestResourceData: postData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        toast({
-            variant: "destructive",
-            title: "Uh oh! Something went wrong.",
-            description: "Could not post your decision. Please try again.",
-        });
-      });
+      
+      addDocumentNonBlocking(postsCollection, postData);
+      setNewPost('');
+      toast({ title: 'Posted to community!' });
   };
 
 
@@ -115,9 +102,22 @@ export default function CommunityPage() {
       </div>
 
       <div className="space-y-3">
-        {posts.map(p => (
+        {isLoading ? (
+          <>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </>
+        ) : posts && posts.length > 0 ? (
+          posts.map(p => (
             <PostCard key={p.id} post={p} />
-        ))}
+          ))
+        ) : (
+          <div className="text-center py-16">
+            <h3 className="font-semibold">No community posts yet.</h3>
+            <p className="text-slate-500 text-sm mt-2">Be the first to share a decision!</p>
+          </div>
+        )}
       </div>
     </div>
   );

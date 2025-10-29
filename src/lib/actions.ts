@@ -6,8 +6,7 @@ import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
 import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -28,16 +27,10 @@ function saveDecision(userId: string, decisionData: any) {
     const { firestore } = initializeFirebase();
     const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
     
-    addDoc(decisionsCollection, {
+    // Use non-blocking update to prevent UI freezes and handle errors gracefully.
+    addDocumentNonBlocking(decisionsCollection, {
         ...decisionData,
         createdAt: serverTimestamp(),
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: decisionsCollection.path,
-            operation: 'create',
-            requestResourceData: decisionData
-        });
-        errorEmitter.emit('permission-error', permissionError);
     });
 }
 
