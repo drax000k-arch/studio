@@ -38,14 +38,13 @@ const prompt = ai.definePrompt({
   name: 'generateDecisionJustificationPrompt',
   input: {schema: GenerateDecisionJustificationInputSchema},
   output: {schema: GenerateDecisionJustificationOutputSchema},
-  prompt: `You are an AI assistant that provides justifications for your recommended decisions.
+  prompt: `You are an AI assistant that provides justifications for recommended decisions.
+  The user was facing the following decision: "{{subject}}".
+  They had the options: {{#each options}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}.
 
-  Subject: {{{subject}}}
-  Options: {{#each options}}{{{this}}}, {{/each}}
-  AI Recommendation: {{{aiRecommendation}}}
+  Based on their context, you have recommended: "{{aiRecommendation}}".
 
-  Provide a clear and {{#if (eq responseLength "short")}}concise{{else}}detailed{{/if}} justification for the AI's recommended option, explaining the reasoning and factors considered. Focus on logical reasoning, budget considerations, and any other relevant parameters.
-  `,
+  Now, provide a {{responseLength}} justification for why "{{aiRecommendation}}" is the best choice. Explain your reasoning clearly.`,
 });
 
 const generateDecisionJustificationFlow = ai.defineFlow(

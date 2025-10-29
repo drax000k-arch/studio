@@ -4,9 +4,9 @@ import { generateDecisionJustification } from '@/ai/flows/generate-decision-just
 import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { getFirestore, addDoc, collection } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection } from 'firebase/firestore';
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -27,7 +27,6 @@ function saveDecision(userId: string, decisionData: any) {
     const { firestore } = initializeFirebase();
     const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
     
-    // Use non-blocking update to prevent UI freezes and handle errors gracefully.
     addDocumentNonBlocking(decisionsCollection, {
         ...decisionData,
         createdAt: new Date().toISOString(),
@@ -38,18 +37,19 @@ function saveDecision(userId: string, decisionData: any) {
 export async function getAiDecision(
   data: z.infer<typeof decisionFormSchema>
 ): Promise<ActionState> {
-  const validation = decisionFormSchema.safeParse(data);
-
-  if (!validation.success) {
-    return {
-      status: 'error',
-      message: validation.error.errors.map(e => e.message).join(', '),
-    };
-  }
-
-  const { subject, options, userContext, responseLength, userId } = validation.data;
-
   try {
+    const validation = decisionFormSchema.safeParse(data);
+
+    if (!validation.success) {
+      return {
+        status: 'error',
+        message: validation.error.errors.map(e => e.message).join(', '),
+      };
+    }
+
+    const { subject, options, userContext, responseLength, userId } = validation.data;
+
+    // 1. Get the AI's recommendation
     const recommendationResult = await generateDecisionRecommendation({
       subject,
       options: options,
@@ -58,57 +58,59 @@ export async function getAiDecision(
 
     let aiRecommendation = recommendationResult.recommendation;
 
-    // CRITICAL FIX: Validate that the AI's recommendation is one of the provided options.
-    // If not, use the first option as a safe fallback.
+    // 2. CRITICAL: Validate the AI's output. If it's not a valid option, fallback to the first option.
     if (!options.includes(aiRecommendation)) {
       console.warn(`AI returned an invalid option: "${aiRecommendation}". Falling back to the first option.`);
       aiRecommendation = options[0];
     }
     
+    // 3. Generate justification for the (now guaranteed valid) recommendation
     const justificationResult = await generateDecisionJustification({
       subject,
       options: options,
-      aiRecommendation, // Use the validated or fallback recommendation
+      aiRecommendation: aiRecommendation,
       responseLength,
     });
     
     if (!justificationResult || !justificationResult.justification) {
-        throw new Error("Failed to generate justification.");
+        throw new Error("Failed to generate justification from the AI.");
     }
 
-    const decisionResult = {
+    const finalResult: DecisionResult = {
       recommendation: aiRecommendation,
       justification: justificationResult.justification,
     };
 
+    // 4. Save the decision to Firestore if a user is logged in.
     if (userId) {
        saveDecision(userId, {
           subject,
           options,
           userContext,
-          ...decisionResult,
+          ...finalResult,
        });
     }
 
+    // 5. Return success state
     return {
       status: 'success',
-      result: decisionResult,
+      result: finalResult,
     };
+
   } catch (error) {
-    console.error(error);
+    console.error("Error in getAiDecision:", error);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     
-    // Improved error message for service availability
     if (errorMessage.includes('503') || errorMessage.includes('unavailable')) {
        return {
         status: 'error',
-        message: "We're sorry, but the AI service is currently experiencing high traffic or is unavailable. Please try again in a few moments.",
+        message: "The AI service is currently overloaded or unavailable. Please try again in a few moments.",
       };
     }
 
     return {
       status: 'error',
-      message: `An error occurred while getting your advice. Please check your connection and try again.`,
+      message: `An unexpected error occurred while getting your advice. Please check your connection and try again.`,
     };
   }
 }
