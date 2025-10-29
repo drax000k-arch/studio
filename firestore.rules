@@ -1,153 +1,152 @@
 /**
  * @fileoverview Firestore Security Rules for Advisify AI.
  *
- * Core Philosophy: This ruleset enforces a strict user-ownership model for user data and associated decision scenarios and options.
- * Comments are publicly accessible but write access is restricted to authenticated users.
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user data, decision scenarios, and decision options.
+ * Comments are stored in a top-level collection and are publicly readable, but only the owner can modify them.
  *
  * Data Structure:
  * - /users/{userId}: Stores user profiles. Only the authenticated user can access their own profile.
- * - /users/{userId}/decisionScenarios/{decisionScenarioId}: Stores decision scenarios created by each user. Only the owning user can manage their scenarios.
- * - /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}: Stores decision options for each scenario. Only the owning user can manage options within their scenarios.
- * - /comments/{commentId}: Stores comments made on decision scenarios. Any authenticated user can create a comment; only the owner can edit/delete their own comments.
+ * - /users/{userId}/decisionScenarios/{decisionScenarioId}: Stores decision scenarios created by a user. Only the user can access these.
+ * - /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}: Stores options for a specific decision scenario. Only the user who owns the scenario can access these.
+ * - /comments/{commentId}: Stores comments. Any authenticated user can read comments, but only the comment's author can modify it.
  *
  * Key Security Decisions:
- * - User listing is disabled to protect user privacy.
- * - Comments are stored in a top-level collection to allow for easier querying and are publicly readable.
+ * - Users can only access their own data.
+ * - Public read access to comments.
+ * - Only the comment owner can update or delete comments.
  *
  * Denormalization for Authorization:
- * - Decision scenarios and options inherit ownership from their parent user document via the path.
- * - Comments store the userId of the author to allow the author to edit/delete their comments.
+ *  - Comments include the userId of the author to allow for owner-based write rules without additional reads.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure access to user profiles.
+     * @description Manages user profiles.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user can create their own profile if the userId matches their auth.uid.
-     * @allow (get, update, delete) - Authenticated user can only access their own profile.
-     * @deny (list) - Prevents listing all users.
-     * @deny (create) - Unauthenticated users cannot create profiles.
-     * @deny (update, delete) - Users cannot modify or delete other user profiles.
-     * @principle Enforces document ownership for user profiles.
+     * @allow (create) User with ID 'user123' can create their profile.
+     *   - auth.uid: 'user123'
+     *   - request.resource.data.id: 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can access their profile.
+     *   - auth.uid: 'user123'
+     * @deny (create) User with ID 'user456' cannot create a profile for 'user123'.
+     *   - auth.uid: 'user456'
+     *   - request.resource.data.id: 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot access user 'user123' profile.
+     *   - auth.uid: 'user456'
+     * @principle Enforces document ownership for writes, restricts access to a user's own data.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isSignedIn() {
+        return request.auth != null;
       }
 
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
     }
 
     /**
-     * @description Secure access to decision scenarios owned by a user.
+     * @description Manages decision scenarios for a specific user.
      * @path /users/{userId}/decisionScenarios/{decisionScenarioId}
-     * @allow (create, get, list, update, delete) - Authenticated user can manage their own scenarios.
-     * @deny (create, get, list, update, delete) - Users cannot manage other user scenarios.
-     * @principle Enforces document ownership for decision scenarios.
+     * @allow (create) User with ID 'user123' can create a decision scenario.
+     *   - auth.uid: 'user123'
+     *   - request.resource.data.userId: 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can access their decision scenario.
+     *   - auth.uid: 'user123'
+     * @deny (create) User with ID 'user456' cannot create a decision scenario for 'user123'.
+     *   - auth.uid: 'user456'
+     *   - request.resource.data.userId: 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot access decision scenario of 'user123'.
+     *   - auth.uid: 'user456'
+     * @principle Enforces document ownership for writes, restricts access to a user's own data.
      */
     match /users/{userId}/decisionScenarios/{decisionScenarioId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isSignedIn() {
+        return request.auth != null;
       }
 
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource != null && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null && resource.data.userId == userId;
     }
 
     /**
-     * @description Secure access to decision options within a decision scenario owned by a user.
+     * @description Manages decision options within a specific decision scenario.
      * @path /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}
-     * @allow (create, get, list, update, delete) - Authenticated user can manage options within their own scenarios.
-     * @deny (create, get, list, update, delete) - Users cannot manage options in other user's scenarios.
-     * @principle Enforces document ownership for decision options.
+     * @allow (create) User with ID 'user123' can create an option for their decision scenario.
+     *   - auth.uid: 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can access options for their decision scenario.
+     *   - auth.uid: 'user123'
+     * @deny (create) User with ID 'user456' cannot create a decision option for 'user123' scenario.
+     *   - auth.uid: 'user456'
+     * @deny (get, update, delete) User with ID 'user456' cannot access decision options of 'user123' scenario.
+     *   - auth.uid: 'user456'
+     * @principle Enforces document ownership for writes, restricts access to a user's own data.
      */
     match /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-        function isExistingOwner(userId) {
-          return isOwner(userId) && resource != null;
-        }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Secure access to comments on decision scenarios.
-     * @path /comments/{commentId}
-     * @allow (get, list) - Allows public reading of comments.
-     * @allow (create) - Allows any authenticated user to create a comment.
-     * @allow (update, delete) - Allows the owner of the comment to modify or delete it.
-     * @deny (create, update, delete) - Prevents unauthenticated users from creating, modifying, or deleting comments.
-     * @principle Allows public read access while enforcing ownership for write access.
-     */
-    match /comments/{commentId} {
       function isSignedIn() {
         return request.auth != null;
       }
 
-      function isOwner() {
-        return resource.data.userId == request.auth.uid;
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Manages comments on decision scenarios.
+     * @path /comments/{commentId}
+     * @allow (get, list) Any signed-in user can read comments.
+     *   - auth.uid: 'any_user'
+     * @allow (create) User with ID 'user123' can create a comment.
+     *   - auth.uid: 'user123'
+     *   - request.resource.data.userId: 'user123'
+     * @allow (update, delete) User with ID 'user123' can modify their own comment.
+     *   - auth.uid: 'user123'
+     *   - resource.data.userId: 'user123'
+     * @deny (create) User with ID 'user456' cannot create a comment on behalf of 'user123'.
+     *   - auth.uid: 'user456'
+     *   - request.resource.data.userId: 'user123'
+     * @deny (update, delete) User with ID 'user456' cannot modify comment of 'user123'.
+     *   - auth.uid: 'user456'
+     *   - resource.data.userId: 'user123'
+     * @principle Allows public reads, enforces document ownership for writes.
+     */
+    match /comments/{commentId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
       }
 
-        function isExistingOwner() {
-          return isSignedIn() && isOwner();
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
       allow get: if true;
       allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
-    }
-
-    /**
-     * @description Secure access to the community posts.
-     * @path /community-posts
-     * @allow (get, list) - Allows public reading of community posts.
-     * @deny (create, update, delete) - Prevents community posts from being created, modified, or deleted.
-     * @principle Allows public read access while enforcing no write access.
-     */
-    match /community-posts {
-        allow get: if true;
-        allow list: if true;
-        allow create: if false;
-        allow update: if false;
-        allow delete: if false;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(resource.data.userId) && resource != null;
     }
   }
 }
