@@ -4,7 +4,7 @@ import { generateDecisionJustification } from '@/ai/flows/generate-decision-just
 import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, addDoc, collection } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -30,7 +30,7 @@ function saveDecision(userId: string, decisionData: any) {
     // Use non-blocking update to prevent UI freezes and handle errors gracefully.
     addDocumentNonBlocking(decisionsCollection, {
         ...decisionData,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
     });
 }
 
