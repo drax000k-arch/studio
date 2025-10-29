@@ -79,8 +79,8 @@ export async function getAiDecision(
       responseLength,
     });
     
-    if (!justificationResult.justification) {
-        throw new Error("Failed to generate justification.")
+    if (!justificationResult || !justificationResult.justification) {
+        throw new Error("Failed to generate justification.");
     }
 
     const decisionResult = {

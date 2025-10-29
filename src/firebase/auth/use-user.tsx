@@ -19,7 +19,7 @@ export function useUser() {
 
   useEffect(() => {
     if (app === null) {
-      setUserState({ user: null, loading: false });
+      // Defer setting loading to false to avoid flashes of logged-out state
       return;
     }
     const auth = getAuth(app);
@@ -27,9 +27,11 @@ export function useUser() {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in
+        // User is signed in, update state immediately for a responsive UI
+        setUserState({ user, loading: false });
+
+        // Now, handle Firestore profile in the background
         const userRef = doc(firestore, 'users', user.uid);
-        
         try {
           const userDoc = await getDoc(userRef);
 
@@ -50,16 +52,14 @@ export function useUser() {
                       requestResourceData: profileData
                   });
                   errorEmitter.emit('permission-error', permissionError);
-                  // Even if creating the profile fails, the user is still logged in.
-                  // We can proceed to set the user state.
+                  // Log the error but don't disrupt the user's session
+                  console.error("Failed to create user profile in Firestore:", permissionError);
               });
           }
-          setUserState({ user, loading: false });
         } catch (error) {
-            console.error("Error fetching user document:", error);
-            // If there's an error (e.g., network, permissions), we still set the user,
-            // but the profile might not be fully synced.
-            setUserState({ user, loading: false });
+            console.error("Error fetching or creating user document:", error);
+            // If there's an error (e.g., network, permissions), we still logged the user in.
+            // The profile might not be synced, but the app is usable.
         }
       } else {
         // User is signed out

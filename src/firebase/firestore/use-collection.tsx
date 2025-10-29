@@ -9,21 +9,18 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 // Helper to create a stable query key
 const createQueryKey = (query: Query): string => {
-  if (query) {
-    // @ts-ignore
-    return query._query.canonicalId;
-  }
-  return '';
+  // @ts-ignore
+  return query.path + JSON.stringify(query._query.filters) + query._query.limit + query._query.startAt + query._query.endAt;
 };
 export function useCollection<T>(query: Query<T> | null) {
   const [data, setData] = useState<T[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const queryKey = useMemo(() => query ? createQueryKey(query as Query<DocumentData>) : '', [query]);
+  const queryKey = useMemo(() => query ? createQueryKey(query as Query<DocumentData>) : null, [query]);
 
   useEffect(() => {
-    if (!query) {
+    if (!query || !queryKey) {
       setData(null);
       setLoading(false);
       return;
@@ -43,7 +40,8 @@ export function useCollection<T>(query: Query<T> | null) {
       },
       (err) => {
         const permissionError = new FirestorePermissionError({
-          path: (query as any)._query.path.toString(),
+          // @ts-ignore
+          path: query._query.path.toString(),
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
