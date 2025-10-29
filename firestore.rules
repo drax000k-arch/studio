@@ -125,14 +125,14 @@ service cloud.firestore {
       }
 
         function isExistingOwner() {
-          return isOwner() && resource != null;
+          return isSignedIn() && isOwner();
         }
 
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && isExistingOwner();
-      allow delete: if isSignedIn() && isExistingOwner();
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
     /**
