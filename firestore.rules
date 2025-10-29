@@ -1,88 +1,102 @@
-/**
- * @file Firestore Security Rules
- * @description This ruleset enforces a user-ownership model for user profiles and decisions,
- *              and allows public read access to community posts with owner-only write access.
- *
- * Data Structure:
- * - /users/{userId}: Stores public user profile information, accessible only to the user.
- * - /community-posts/{postId}: Stores community posts, publicly readable but writable only by the post author.
- * - /users/{userId}/decisions/{decisionId}: Stores user-specific decisions, accessible only to the user.
- *
- * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Community posts are publicly readable, but only the author can create, update, or delete them.  The author's `uid` must match `request.auth.uid` on creation.
- * - Users can only read, create, update, and delete their own decisions.
- * - Listing of users is disallowed.
- *
- * Denormalization for Authorization:
- * - The `CommunityPost` entity requires an `author.uid` field to determine ownership for write operations. This avoids costly `get()` calls to a separate `/users/{userId}` document.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile documents.
+     * @description Grants access to user documents based on path-based ownership.
      * @path /users/{userId}
-     * @allow (create) User with uid 'user_abc' can create their profile document at /users/user_abc.
-     * @deny (create) User with uid 'user_xyz' cannot create a profile document at /users/user_abc.
-     * @allow (get, update, delete) User with uid 'user_abc' can read/update/delete their profile document at /users/user_abc.
-     * @deny (get, update, delete) User with uid 'user_xyz' cannot read/update/delete the profile document at /users/user_abc.
-     * @principle Enforces document ownership, ensuring users can only access their own profile data.
+     * @allow (create) - Authenticated user with matching userId creates their own document.
+     * @allow (get, update, delete) - Authenticated user with matching userId accesses their own document.
+     * @deny (create) - Authenticated user attempts to create a user document with a different userId.
+     * @deny (get, update, delete) - Authenticated user attempts to access a user document with a different userId.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false; // Listing all users is not permitted.
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Grants access to decision scenarios based on path-based ownership.
+     * @path /users/{userId}/decisionScenarios/{decisionScenarioId}
+     * @allow (create) - Authenticated user with matching userId creates a new decision scenario under their user document.
+     * @allow (get, update, delete) - Authenticated user with matching userId accesses a decision scenario under their user document.
+     * @deny (create) - Authenticated user attempts to create a decision scenario under a different user's document.
+     * @deny (get, update, delete) - Authenticated user attempts to access a decision scenario under a different user's document.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId}/decisionScenarios/{decisionScenarioId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Controls access to community posts. Allows public read access, but restricts write access to the post author.
-     * @path /community-posts/{postId}
-     * @allow (get, list) Any user can read any community post.
-     * @allow (create) User with uid 'user_abc' can create a community post with author.uid: 'user_abc'.
-     * @deny (create) User with uid 'user_xyz' cannot create a community post with author.uid: 'user_abc'.
-     * @allow (update, delete) The author of a post can update and delete it.
-     * @deny (update, delete) A non-author cannot update or delete a post.
-     * @principle Allows public read access to community content, while enforcing ownership for modifications.
+     * @description Grants access to decision options based on path-based ownership.
+     * @path /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}
+     * @allow (create) - Authenticated user with matching userId creates a new decision option under their decision scenario.
+     * @allow (get, update, delete) - Authenticated user with matching userId accesses a decision option under their decision scenario.
+     * @deny (create) - Authenticated user attempts to create a decision option under a different user's or scenario's document.
+     * @deny (get, update, delete) - Authenticated user attempts to access a decision option under a different user's or scenario's document.
+     * @principle Enforces document ownership for writes.
      */
-    match /community-posts/{postId} {
-      allow get, list: if true;
-      allow create: if request.auth != null && request.resource.data.author.uid == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.author.uid);
-      allow delete: if isExistingOwner(resource.data.author.uid);
+    match /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Controls access to user-specific decision documents.
-     * @path /users/{userId}/decisions/{decisionId}
-     * @allow (create) User with uid 'user_abc' can create a decision document under /users/user_abc/decisions/{decisionId}.
-     * @deny (create) User with uid 'user_xyz' cannot create a decision document under /users/user_abc/decisions/{decisionId}.
-     * @allow (get, update, delete) User with uid 'user_abc' can read/update/delete their decision document at /users/user_abc/decisions/{decisionId}.
-     * @deny (get, update, delete) User with uid 'user_xyz' cannot read/update/delete the decision document at /users/user_abc/decisions/{decisionId}.
-     * @principle Enforces document ownership, ensuring users can only access their own decision data.
+     * @description Grants read access to all users for comments, but restricts modification and deletion to the owner.
+     * @path /comments/{commentId}
+     * @allow (get, list) - Any user can read comments.
+     * @allow (create) - Authenticated user can create a new comment.
+     * @allow (update, delete) - Only the user who created the comment can modify or delete it.
+     * @deny (create) - Unauthenticated user attempts to create a comment.
+     * @deny (update, delete) - Authenticated user attempts to modify or delete a comment they did not create.
+     * @principle Allows public read access but enforces ownership for writes.
      */
-    match /users/{userId}/decisions/{decisionId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
+    match /comments/{commentId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-        return isSignedIn() && isOwner(userId) && resource != null;
+      allow get: if true;
+      allow list: if false; // Intentionally disable listing to prevent broad data access.
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId && resource != null;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId && resource != null;
     }
   }
 }

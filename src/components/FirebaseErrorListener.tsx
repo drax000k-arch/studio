@@ -1,27 +1,39 @@
 'use client';
-import { useEffect } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
-import type { FirestorePermissionError } from '@/firebase/errors';
 
+import { useState, useEffect } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+/**
+ * An invisible component that listens for globally emitted 'permission-error' events.
+ * It throws any received error to be caught by Next.js's global-error.tsx.
+ */
 export function FirebaseErrorListener() {
+  // Use the specific error type for the state for type safety.
+  const [error, setError] = useState<FirestorePermissionError | null>(null);
+
   useEffect(() => {
+    // The callback now expects a strongly-typed error, matching the event payload.
     const handleError = (error: FirestorePermissionError) => {
-      // This is a client-side-only module.
-      // We throw the error here to make it visible in the Next.js development error overlay.
-      // This provides a rich debugging experience for Firestore Security Rules.
-      // NOTE: This should only be active in development environments.
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Caught a Firestore permission error. Throwing for visibility in dev overlay.", error.context);
-        throw error;
-      }
+      // Set error in state to trigger a re-render.
+      setError(error);
     };
 
+    // The typed emitter will enforce that the callback for 'permission-error'
+    // matches the expected payload type (FirestorePermissionError).
     errorEmitter.on('permission-error', handleError);
 
+    // Unsubscribe on unmount to prevent memory leaks.
     return () => {
-      errorEmitter.removeListener('permission-error', handleError);
+      errorEmitter.off('permission-error', handleError);
     };
   }, []);
 
-  return null; // This component does not render anything.
+  // On re-render, if an error exists in state, throw it.
+  if (error) {
+    throw error;
+  }
+
+  // This component renders nothing.
+  return null;
 }
