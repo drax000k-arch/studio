@@ -2,6 +2,7 @@
 
 import { generateDecisionJustification } from '@/ai/flows/generate-decision-justification';
 import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
+import { generateDecisionOptions } from '@/ai/flows/generate-decision-options';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
 import { initializeFirebase } from '@/firebase';
@@ -10,14 +11,13 @@ import { collection } from 'firebase/firestore';
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
-  result?: DecisionResult;
+  result?: DecisionResult & { options: string[] };
   message?: string;
 };
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Subject must be at least 3 characters long.' }),
-  options: z.array(z.string().min(1, { message: 'Option cannot be empty.' }))
-    .min(2, { message: 'Please provide at least two options.' }),
+  options: z.array(z.string().min(1)).optional(), // Options are now optional
   userContext: z.string().optional(),
   responseLength: z.enum(['short', 'long']),
   userId: z.string().optional(),
@@ -47,9 +47,27 @@ export async function getAiDecision(
       };
     }
 
-    const { subject, options, userContext, responseLength, userId } = validation.data;
+    const { subject, userContext, responseLength, userId } = validation.data;
+    let options = validation.data.options;
 
-    // 1. Get the AI's recommendation
+    // 1. Generate options if they weren't provided
+    if (!options || options.length < 2) {
+      const generatedOptionsResult = await generateDecisionOptions({
+        subject,
+        userContext: userContext ?? 'No personal context provided.',
+      });
+      if (!generatedOptionsResult || !generatedOptionsResult.options || generatedOptionsResult.options.length === 0) {
+        throw new Error("AI failed to generate any decision options.");
+      }
+      options = generatedOptionsResult.options;
+    }
+    
+    if (options.length < 2) {
+      throw new Error("Could not determine at least two options for the decision.");
+    }
+
+
+    // 2. Get the AI's recommendation from the (now guaranteed) list of options
     const recommendationResult = await generateDecisionRecommendation({
       subject,
       options: options,
@@ -58,13 +76,13 @@ export async function getAiDecision(
 
     let aiRecommendation = recommendationResult.recommendation;
 
-    // 2. CRITICAL: Validate the AI's output. If it's not a valid option, fallback to the first option.
+    // 3. CRITICAL: Validate the AI's output. If it's not a valid option, fallback to the first option.
     if (!options.includes(aiRecommendation)) {
       console.warn(`AI returned an invalid option: "${aiRecommendation}". Falling back to the first option.`);
       aiRecommendation = options[0];
     }
     
-    // 3. Generate justification for the (now guaranteed valid) recommendation
+    // 4. Generate justification for the (now guaranteed valid) recommendation
     const justificationResult = await generateDecisionJustification({
       subject,
       options: options,
@@ -76,22 +94,24 @@ export async function getAiDecision(
         throw new Error("Failed to generate justification from the AI.");
     }
 
-    const finalResult: DecisionResult = {
+    const finalResult: DecisionResult & { options: string[] } = {
       recommendation: aiRecommendation,
       justification: justificationResult.justification,
+      options: options, // Include the options in the final result
     };
 
-    // 4. Save the decision to Firestore if a user is logged in.
+    // 5. Save the decision to Firestore if a user is logged in.
     if (userId) {
        saveDecision(userId, {
           subject,
           options,
           userContext,
-          ...finalResult,
+          recommendation: finalResult.recommendation,
+          justification: finalResult.justification,
        });
     }
 
-    // 5. Return success state
+    // 6. Return success state
     return {
       status: 'success',
       result: finalResult,
