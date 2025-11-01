@@ -6,3 +6,4 @@ import '@/ai/flows/generate-decision-justification.ts';
 import '@/ai/flows/generate-decision-titles.ts';
 import '@/ai/flows/generate-decision-recommendation.ts';
 import '@/ai/flows/generate-decision-options.ts';
+import '@/ai/flows/generate-direct-answer.ts';

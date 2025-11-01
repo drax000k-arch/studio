@@ -62,6 +62,8 @@ export default function DecisionMaker() {
   const isLoading = form.formState.isSubmitting;
   const decisionData = form.getValues();
   const resultData = actionState.status === 'success' ? actionState.result : null;
+  const isDirectAnswer = resultData?.options.length === 0;
+
 
   return (
     <>
@@ -127,7 +129,7 @@ export default function DecisionMaker() {
               Add Option
             </Button>
             <p className="text-xs text-slate-400 -mt-2 pl-1">
-              (Optional) Provide specific options, or let the AI generate them for you.
+              (Optional) Provide specific options for a decision, or just ask a question.
             </p>
 
             <FormField
@@ -211,8 +213,11 @@ export default function DecisionMaker() {
               initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} 
               className="bg-slate-50 rounded-xl p-4 mt-4"
             >
-              <div className="font-semibold text-slate-800">AI Recommendation</div>
-               {decisionData.options?.length === 0 && (
+              <div className="font-semibold text-slate-800">
+                {isDirectAnswer ? "AI Response" : "AI Recommendation"}
+              </div>
+
+               {!isDirectAnswer && resultData.options && (
                 <div className="mt-3">
                   <p className="text-sm text-slate-500 mb-2">The AI considered these options:</p>
                    <div className="flex flex-wrap gap-2">
@@ -222,12 +227,14 @@ export default function DecisionMaker() {
                   </div>
                 </div>
               )}
+
               <div className="mt-3 text-primary font-bold text-lg">{resultData.recommendation}</div>
               <div className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{resultData.justification}</div>
+              
               <div className="mt-4 flex gap-2 items-center">
                 <Button variant="outline" size="sm" className="bg-white shadow-sm flex items-center gap-2"><ThumbsUp size={14}/> Helpful</Button>
                 <Button variant="outline" size="sm" className="bg-white shadow-sm flex items-center gap-2"><ThumbsDown size={14}/> Not helpful</Button>
-                {user && (
+                {user && !isDirectAnswer && (
                    <Button variant="ghost" size="sm" className="ml-auto text-sm text-slate-500" onClick={() => setIsCommunityDialogOpen(true)}>
                       <Share2 className="mr-2 size-4" />
                       Share
@@ -239,13 +246,13 @@ export default function DecisionMaker() {
         </AnimatePresence>
       </div>
 
-      {actionState.status === 'success' && resultData && (
+      {actionState.status === 'success' && resultData && !isDirectAnswer && (
         <CommunityPostDialog
           open={isCommunityDialogOpen}
           onOpenChange={setIsCommunityDialogOpen}
           decision={{
             subject: decisionData.subject,
-            options: resultData.options, // Use the options from the result
+            options: resultData.options,
           }}
           decisionResult={resultData}
         />
