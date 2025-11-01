@@ -1,173 +1,28 @@
-/**
- * @file Firestore Security Rules for Advisify AI.
- *
- * @core_philosophy This ruleset enforces a strict user-ownership model for private data and a mixed model for public data, where reads are public but writes are restricted to the owner.  It uses path-based ownership for user-specific data and denormalized fields for authorization in public collections.  Data validation is relaxed in this prototyping phase, focusing only on relational integrity and ownership.
- * @data_structure
- *   - /users/{userId}: Stores user profiles; only accessible by the user themselves.
- *   - /users/{userId}/decisionScenarios/{decisionScenarioId}: Stores decision scenarios; only accessible by the owning user.
- *   - /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{optionId}: Stores decision options; only accessible by the owning user.
- *   - /publicScenarios/{scenarioId}: Stores publicly shared decision scenarios; readable by anyone, but only writable by the scenario creator.  Includes a denormalized `userId` field.
- *   - /publicScenarios/{scenarioId}/comments/{commentId}: Stores comments for public scenarios; readable by anyone, but only writable by the comment creator. Includes a denormalized `userId` field.
- * @key_security_decisions
- *   - No user listing is allowed (to protect user privacy).
- *   - Public scenarios use a denormalized `userId` field for ownership checks.
- *   - All write operations require authentication and authorization.
- *   - Data type and schema validation are relaxed to enable rapid prototyping.
- * @denormalization_for_authorization
- *   - Public scenarios include a `userId` field to identify the creator. This avoids needing to query user documents to determine ownership.
- *   - Comments under public scenarios also include a `userId` to identify the comment creator.
- * @structural_segregation
- *   - Private decision scenarios and options are stored under the user's document, while public scenarios are stored in a top-level collection.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Grants access to user profiles, enforcing that only the user can access their own profile.
-     * @path /users/{userId}
-     * @allow (create) - Authenticated user with matching userId in the document.
-     * @allow (get, update, delete) - Authenticated user who is the owner (userId matches request.auth.uid).
-     * @deny (create) - Unauthenticated user.
-     * @deny (get, update, delete) - Authenticated user trying to access another user's profile.
-     * @principle Enforces document ownership for reads and writes.
-     */
+    // Users: Users can only read and write their own document.
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // User listing is not allowed.
-      allow create: if isSignedIn() && request.resource.data.id == request.auth.uid;
-      allow update: if isExistingOwner(userId) && request.resource.data.id.size() > 0; // Enforce immutability of userId
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    /**
-     * @description Grants access to decision scenarios owned by a specific user.
-     * @path /users/{userId}/decisionScenarios/{decisionScenarioId}
-     * @allow (create) - Authenticated user creating a scenario for themselves, with the correct userId.
-     * @allow (get, update, delete) - Authenticated user who owns the scenario.
-     * @deny (create) - User attempting to create a scenario for another user.
-     * @deny (get, update, delete) - User attempting to access or modify another user's scenario.
-     * @principle Enforces path-based ownership of decision scenarios.
-     */
-    match /users/{userId}/decisionScenarios/{decisionScenarioId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      function isExistingOwner() {
-        return isSignedIn() && resource != null && request.auth.uid == resource.data.userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
+    // Decision Scenarios: Users can manage their own decision scenarios.
+    match /users/{userId}/decisionScenarios/{scenarioId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
-
-    /**
-     * @description Grants access to decision options within a user's decision scenario.
-     * @path /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{optionId}
-     * @allow (create) - Authenticated user creating an option for their scenario.
-     * @allow (get, update, delete) - Authenticated user who owns the scenario and option.
-     * @deny (create) - User attempting to create an option for another user's scenario.
-     * @deny (get, update, delete) - User attempting to access or modify another user's option.
-     * @principle Enforces path-based ownership of decision options.
-     */
-    match /users/{userId}/decisionScenarios/{decisionScenarioId}/options/{optionId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-       function isExistingOwner() {
-        return isSignedIn() && resource != null && request.auth.uid == resource.data.userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
-    }
-
-    /**
-     * @description Grants read access to public scenarios for all users, but restricts write access to the scenario creator.
-     * @path /publicScenarios/{scenarioId}
-     * @allow (get, list) - Any user (authenticated or unauthenticated).
-     * @allow (create) - Authenticated user creating a scenario with their userId in the document.
-     * @allow (update, delete) - Authenticated user who is the creator of the scenario.
-     * @deny (create) - Unauthenticated user.
-     * @deny (update, delete) - User attempting to modify a scenario they did not create.
-     * @principle Public read access with owner-only writes.
-     */
+    
+    // Public Scenarios: Readable by anyone, writable only by authenticated users.
     match /publicScenarios/{scenarioId} {
-      function isSignedIn() {
-        return request.auth != null;
+      allow read: if true;
+      allow write: if request.auth != null;
+
+      // Comments: Readable by anyone, writable only by authenticated users.
+      match /comments/{commentId} {
+        allow read: if true;
+        allow write: if request.auth != null;
       }
-
-      function isCreatingOwner() {
-        return isSignedIn() && request.resource.data.userId == request.auth.uid;
-      }
-
-      function isExistingOwner() {
-        return isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if isCreatingOwner();
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
-    }
-
-    /**
-     * @description Grants read access to comments on public scenarios for all users, but restricts write access to the comment creator.
-     * @path /publicScenarios/{scenarioId}/comments/{commentId}
-     * @allow (get, list) - Any user (authenticated or unauthenticated).
-     * @allow (create) - Authenticated user creating a comment with their userId in the document.
-     * @allow (update, delete) - Authenticated user who is the creator of the comment.
-     * @deny (create) - Unauthenticated user.
-     * @deny (update, delete) - User attempting to modify a comment they did not create.
-     * @principle Public read access with owner-only writes, denormalized userId for authorization.
-     */
-    match /publicScenarios/{scenarioId}/comments/{commentId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isCreatingOwner() {
-        return isSignedIn() && request.resource.data.userId == request.auth.uid;
-      }
-
-      function isExistingOwner() {
-        return isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if isCreatingOwner();
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
     }
   }
 }
