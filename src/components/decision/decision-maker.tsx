@@ -17,9 +17,9 @@ import { Loader2, Plus, Share2, ThumbsDown, ThumbsUp, Trash2, AlertCircle } from
 import { getAiDecision, type ActionState } from '@/lib/actions';
 import { Textarea } from '../ui/textarea';
 import { CommunityPostDialog } from './community-post-dialog';
-import { useUser } from '@/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useUser } from '@/firebase';
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Please describe your situation.' }),
@@ -186,7 +186,6 @@ export default function DecisionMaker() {
             </motion.div>
           )}
         </AnimatePresence>
-
       </div>
 
       {actionState.status === 'success' && actionState.result && (
