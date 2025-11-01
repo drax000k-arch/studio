@@ -8,21 +8,21 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user."
+          "description": "Unique identifier for the user.",
+          "format": "uuid"
         },
         "username": {
           "type": "string",
-          "description": "User's chosen username.",
-          "format": "string"
+          "description": "The username of the user."
         },
         "email": {
           "type": "string",
-          "description": "User's email address.",
+          "description": "The email address of the user.",
           "format": "email"
         },
-        "registrationDate": {
+        "createdAt": {
           "type": "string",
-          "description": "Date and time when the user registered.",
+          "description": "The date and time the user account was created.",
           "format": "date-time"
         }
       },
@@ -30,73 +30,80 @@
         "id",
         "username",
         "email",
-        "registrationDate"
+        "createdAt"
       ]
     },
     "DecisionScenario": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DecisionScenario",
       "type": "object",
-      "description": "Represents a decision scenario posted by a user.",
+      "description": "Represents a decision scenario created by a user.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the decision scenario."
+          "description": "Unique identifier for the decision scenario.",
+          "format": "uuid"
         },
         "userId": {
           "type": "string",
           "description": "Reference to the User who created this scenario. (Relationship: User 1:N DecisionScenario)"
         },
-        "title": {
+        "subject": {
           "type": "string",
-          "description": "Title of the decision scenario."
+          "description": "The subject of the decision scenario."
         },
         "description": {
           "type": "string",
-          "description": "Detailed description of the decision scenario."
+          "description": "A detailed description of the decision scenario."
         },
-        "postDate": {
+        "createdAt": {
           "type": "string",
-          "description": "Date and time when the scenario was posted.",
+          "description": "The date and time the decision scenario was created.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "title",
+        "subject",
         "description",
-        "postDate"
+        "createdAt"
       ]
     },
     "DecisionOption": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DecisionOption",
       "type": "object",
-      "description": "Represents an option within a decision scenario.",
+      "description": "Represents a single option within a decision scenario.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the decision option."
+          "description": "Unique identifier for the decision option.",
+          "format": "uuid"
         },
-        "scenarioId": {
+        "decisionScenarioId": {
           "type": "string",
           "description": "Reference to the DecisionScenario this option belongs to. (Relationship: DecisionScenario 1:N DecisionOption)"
         },
-        "text": {
+        "name": {
           "type": "string",
-          "description": "Text of the decision option."
+          "description": "The name of the decision option."
         },
-        "aiWeighting": {
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the decision option."
+        },
+        "aiWeight": {
           "type": "number",
-          "description": "The weighting determined by the AI."
+          "description": "The AI weighting for this option."
         }
       },
       "required": [
         "id",
-        "scenarioId",
-        "text",
-        "aiWeighting"
+        "decisionScenarioId",
+        "name",
+        "description",
+        "aiWeight"
       ]
     },
     "Comment": {
@@ -107,32 +114,33 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the comment."
+          "description": "Unique identifier for the comment.",
+          "format": "uuid"
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who wrote the comment. (Relationship: User 1:N Comment)"
+          "description": "Reference to the User who created this comment. (Relationship: User 1:N Comment)"
         },
-        "scenarioId": {
+        "decisionScenarioId": {
           "type": "string",
           "description": "Reference to the DecisionScenario this comment belongs to. (Relationship: DecisionScenario 1:N Comment)"
         },
         "text": {
           "type": "string",
-          "description": "Text of the comment."
+          "description": "The text content of the comment."
         },
-        "commentDate": {
+        "createdAt": {
           "type": "string",
-          "description": "Date and time when the comment was posted.",
+          "description": "The date and time the comment was created.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "scenarioId",
+        "decisionScenarioId",
         "text",
-        "commentDate"
+        "createdAt"
       ]
     }
   },
@@ -151,11 +159,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user data. Access is restricted to the user (path-based ownership).",
+          "description": "Stores user profiles. Path-based ownership: only the user can access their own profile.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique ID of the user (same as Firebase Auth UID)."
             }
           ]
         }
@@ -167,60 +175,80 @@
           "schema": {
             "$ref": "#/backend/entities/DecisionScenario"
           },
-          "description": "Stores decision scenarios created by the user. Access is restricted to the user (path-based ownership).",
+          "description": "Stores decision scenarios created by a specific user. Path-based ownership: only the user can access their own scenarios.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique ID of the user."
             },
             {
               "name": "decisionScenarioId",
-              "description": "The unique identifier of the decision scenario."
+              "description": "The unique ID of the decision scenario."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}",
+        "path": "/users/{userId}/decisionScenarios/{decisionScenarioId}/options/{optionId}",
         "definition": {
           "entityName": "DecisionOption",
           "schema": {
             "$ref": "#/backend/entities/DecisionOption"
           },
-          "description": "Stores decision options for a specific decision scenario. Access is restricted to the user who owns the scenario (path-based ownership).",
+          "description": "Stores options for a specific decision scenario. Path-based ownership: only the user can access options for their scenarios.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique ID of the user."
             },
             {
               "name": "decisionScenarioId",
-              "description": "The unique identifier of the decision scenario."
+              "description": "The unique ID of the decision scenario."
             },
             {
-              "name": "decisionOptionId",
-              "description": "The unique identifier of the decision option."
+              "name": "optionId",
+              "description": "The unique ID of the decision option."
             }
           ]
         }
       },
       {
-        "path": "/comments/{commentId}",
+        "path": "/publicScenarios/{scenarioId}",
+        "definition": {
+          "entityName": "DecisionScenario",
+          "schema": {
+            "$ref": "#/backend/entities/DecisionScenario"
+          },
+          "description": "Stores publicly shared decision scenarios. Includes denormalized 'userId' field for authorization independence (identifies the scenario creator).",
+          "params": [
+            {
+              "name": "scenarioId",
+              "description": "The unique ID of the public decision scenario."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/publicScenarios/{scenarioId}/comments/{commentId}",
         "definition": {
           "entityName": "Comment",
           "schema": {
             "$ref": "#/backend/entities/Comment"
           },
-          "description": "Stores comments on decision scenarios. Each comment includes the `userId` of the author and the `scenarioId` it relates to.",
+          "description": "Stores comments for a public decision scenario. Includes denormalized 'userId' field for authorization independence (identifies the comment creator).",
           "params": [
             {
+              "name": "scenarioId",
+              "description": "The unique ID of the public decision scenario."
+            },
+            {
               "name": "commentId",
-              "description": "The unique identifier of the comment."
+              "description": "The unique ID of the comment."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the Advisify AI application, focusing on decision scenarios, options, and community feedback. It prioritizes authorization independence by leveraging path-based ownership and segregating data based on access needs. The structure aims to be scalable, secure, and easily debuggable.\n\n*   **Users:** User data is stored under the `/users/{userId}` path, ensuring private access controlled by Firebase Authentication.  This structure inherently supports secure `list` operations (QAPs) for a user's own data.\n*   **Decision Scenarios:** Decision scenarios are nested under the user's document (`/users/{userId}/decisionScenarios/{decisionScenarioId}`). This path-based ownership simplifies security rules and ensures that only the user can manage their scenarios. This also improves QAPs, as listing decision scenarios is scoped to a specific user.\n*   **Decision Options:** Decision options are further nested under decision scenarios (`/users/{userId}/decisionScenarios/{decisionScenarioId}/options/{decisionOptionId}`). This continues the path-based ownership pattern, maintaining security and simplifying data access.  This supports QAPs by restricting list operations to options within a specific scenario owned by a specific user.\n*   **Comments:** Comments are stored in a top-level collection, `/comments/{commentId}`, and include the `scenarioId` and `userId` of the author. While comments are associated with scenarios, they are not nested to allow easier querying and listing of comments across all scenarios, if needed.  The `userId` field within each comment ensures that the creator can be identified and potentially given special permissions (e.g., deletion). Security rules will need to validate that the `scenarioId` exists.\n\nThis structure enables authorization independence because access control relies primarily on the document path and the authenticated user's ID, avoiding complex `get()` operations to check parent document properties.  The structural segregation simplifies rules, as each collection has a clear and consistent security posture.  The use of hierarchical paths provides clear ownership and supports secure list operations, while the top-level `/comments` collection allows for broader queries when needed."
+    "reasoning": "The Firestore structure is designed to support the Advisify AI application's features, focusing on decision scenarios, options, and community interaction. It prioritizes authorization independence and clear security rules.\n\n*   **Users:** User data is stored in `/users/{userId}`. This path-based ownership ensures that only the user can access their own data.\n*   **Decision Scenarios:** Decision scenarios are stored within each user's document at `/users/{userId}/decisionScenarios/{decisionScenarioId}`. This leverages path-based ownership, providing straightforward security rules (a user can only read/write their own scenarios).\n*   **Decision Options:** Options for each scenario are nested under `/users/{userId}/decisionScenarios/{decisionScenarioId}/options/{optionId}`. This continues the path-based ownership model.\n*   **Public Scenarios:** Public scenarios, for community sharing, are stored in `/publicScenarios/{scenarioId}`. To ensure secure `list` operations (QAPs), we denormalize the `userId` of the scenario creator into each document. Comments are stored in a subcollection `/publicScenarios/{scenarioId}/comments/{commentId}`. To achieve Authorization Independence, each comment document will include the `userId` of the user who created the comment.\n\nThis structure ensures authorization independence by avoiding `get()` calls in security rules. Path-based ownership for user-specific data and denormalization of authorization data (userId in public scenarios and comments) are key to atomic operations and simplified security rules. Segregation of user-owned vs. public data improves security posture. The structure enables secure `list` operations (QAPs) because access control is based on the presence of user IDs, either via path ownership or denormalized fields, rather than filtering based on document content."
   }
 }
