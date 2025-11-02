@@ -2,12 +2,11 @@
 
 import { generateDecisionJustification } from '@/ai/flows/generate-decision-justification';
 import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-recommendation';
-import { generateDecisionOptions } from '@/ai/flows/generate-decision-options';
 import { generateDirectAnswer } from '@/ai/flows/generate-direct-answer';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { initializeFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { saveDecisionToFirestore } from '@/firebase/server-actions';
+
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -22,16 +21,6 @@ const decisionFormSchema = z.object({
   responseLength: z.enum(['short', 'long']),
   userId: z.string().optional(),
 });
-
-function saveDecision(userId: string, decisionData: any) {
-    const { firestore } = initializeFirebase();
-    const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
-    
-    addDocumentNonBlocking(decisionsCollection, {
-        ...decisionData,
-        createdAt: new Date().toISOString(),
-    });
-}
 
 
 export async function getAiDecision(
@@ -62,15 +51,13 @@ export async function getAiDecision(
       }
       
       const finalResult: DecisionResult & { options: string[] } = {
-        // For direct answers, the "recommendation" is the question, and the "justification" is the answer.
-        recommendation: subject,
+        recommendation: subject, // For direct answers, the "recommendation" is the question.
         justification: directAnswerResult.answer,
         options: [], // No options were involved.
       };
       
-      // We can still save this interaction if the user is logged in.
        if (userId) {
-         saveDecision(userId, {
+         await saveDecisionToFirestore(userId, {
             subject: subject,
             options: [],
             userContext,
@@ -124,7 +111,7 @@ export async function getAiDecision(
 
     // Step 4: Save the decision to Firestore if a user is logged in.
     if (userId) {
-       saveDecision(userId, {
+       await saveDecisionToFirestore(userId, {
           subject,
           options,
           userContext,
