@@ -77,6 +77,7 @@ export async function getAiDecision(
             userContext,
             recommendation: "Direct Answer",
             justification: directAnswerResult.answer,
+            status: 'Pending',
          });
       }
 
@@ -130,6 +131,7 @@ export async function getAiDecision(
           userContext,
           recommendation: finalResult.recommendation,
           justification: finalResult.justification,
+          status: 'Pending',
        });
     }
 

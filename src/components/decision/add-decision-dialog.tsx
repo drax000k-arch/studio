@@ -70,6 +70,7 @@ export function AddDecisionDialog({ open, onOpenChange }: AddDecisionDialogProps
       justification: 'Manually added.',
       options: [],
       createdAt: new Date().toISOString(),
+      status: data.status,
     };
 
     addDocumentNonBlocking(decisionsCollection, newDecision);
