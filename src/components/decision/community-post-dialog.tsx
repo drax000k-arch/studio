@@ -44,6 +44,11 @@ export function CommunityPostDialog({
     }
 
     const postsCollection = collection(firestore, 'community-posts');
+    const initialVotes = decision.options.reduce((acc, option) => {
+      acc[option] = 0;
+      return acc;
+    }, {} as { [option: string]: number });
+
     const postData = {
       author: {
         name: user.displayName,
@@ -56,6 +61,8 @@ export function CommunityPostDialog({
       aiJustification: decision.justification,
       createdAt: new Date().toISOString(),
       commentCount: 0,
+      votes: initialVotes,
+      voters: {},
     };
     
     addDocumentNonBlocking(postsCollection, postData);

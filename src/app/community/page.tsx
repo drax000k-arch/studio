@@ -1,6 +1,6 @@
 'use client';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import type { CommunityPost } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -36,24 +36,53 @@ function ExpandableText({ text, maxLength = 100 }: { text: string; maxLength?: n
 
 
 function PostCard({ post }: { post: CommunityPost }) {
+  const firestore = useFirestore();
   const postedAtDate = post.createdAt ? new Date(post.createdAt) : new Date();
   const postedAt = formatDistanceToNow(postedAtDate, { addSuffix: true });
   const { user } = useUser();
   const { toast } = useToast();
+  const [showComments, setShowComments] = useState(false);
+
+  const totalVotes = Object.values(post.votes || {}).reduce((sum, count) => sum + count, 0);
+  const userVote = user ? post.voters?.[user.uid] : null;
   
   const authorAvatar = post.author.avatarUrl;
 
-  const handleVote = () => {
-    if (!user) {
+  const handleVote = async (option: string) => {
+    if (!user || !firestore) {
        toast({
         variant: 'destructive',
         title: 'Please log in to vote.',
       });
       return;
     }
-    toast({ title: "You voted! (Feature coming soon)"});
+    if (userVote) {
+        toast({
+            variant: 'destructive',
+            title: 'Already Voted',
+            description: `You have already voted for "${userVote}".`,
+        });
+        return;
+    }
+    
+    const postRef = doc(firestore, 'community-posts', post.id);
+    
+    // Using dot notation for nested fields
+    const newVotes = { ...post.votes, [option]: (post.votes[option] || 0) + 1 };
+    const newVoters = { ...post.voters, [user.uid]: option };
+    
+    try {
+        await updateDoc(postRef, {
+            votes: newVotes,
+            voters: newVoters,
+        });
+        toast({ title: "Vote cast successfully!"});
+    } catch (error) {
+        console.error("Error casting vote:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not cast your vote."});
+    }
   }
-
+  
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
       <div className="flex items-center gap-3">
@@ -79,17 +108,36 @@ function PostCard({ post }: { post: CommunityPost }) {
 
       <div className="space-y-2">
          <h4 className="text-xs font-semibold text-slate-400">Cast your vote</h4>
-        {post.options.map((option, index) => (
-           <button key={index} onClick={handleVote} className="w-full px-3 py-2 text-sm text-left rounded-md bg-slate-100 hover:bg-slate-200 transition-colors">
-               {option}
-               {/* TODO: Add vote percentage display here */}
+        {post.options.map((option, index) => {
+           const voteCount = post.votes?.[option] || 0;
+           const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+           return (
+             <button key={index} onClick={() => handleVote(option)} 
+                className="w-full px-3 py-2 text-sm text-left rounded-md bg-slate-100 hover:bg-slate-200 transition-colors relative disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={!!userVote}>
+                <div className="flex justify-between items-center">
+                  <span>{option}</span>
+                   {userVote && <span className="font-bold">{percentage}%</span>}
+                </div>
+                 {userVote && (
+                    <div className="absolute top-0 left-0 h-full rounded-md bg-primary/10" style={{ width: `${percentage}%` }}></div>
+                )}
             </button>
-        ))}
+           )
+        })}
       </div>
        <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
          <div>{post.commentCount || 0} comments</div>
-         <button className="hover:text-slate-800">Comment</button>
+         <button className="hover:text-slate-800" onClick={() => setShowComments(!showComments)}>
+           {showComments ? 'Hide Comments' : 'Comment'}
+         </button>
       </div>
+
+      {showComments && (
+        <div className="border-t pt-4 mt-4">
+            <p className="text-sm text-slate-500">Comments feature coming soon.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -130,6 +178,8 @@ export default function CommunityPage() {
           aiJustification: 'This is a manually created post with a default AI justification.',
           createdAt: new Date().toISOString(),
           commentCount: 0,
+          votes: { Yes: 0, No: 0 },
+          voters: {},
       };
       
       addDocumentNonBlocking(postsCollection, postData);

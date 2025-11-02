@@ -9,22 +9,27 @@ import { getMessaging } from 'firebase/messaging';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
+  // If an app is already initialized, return the existing instance's SDKs.
   if (getApps().length > 0) {
     return getSdks(getApp());
   }
 
-  // When in development, always use the local config.
-  // In production, App Hosting's automatic initialization will take precedence.
+  // When in a development environment, we always want to use the explicit
+  // config object to ensure we're connecting to the correct project.
   if (process.env.NODE_ENV === 'development') {
     const firebaseApp = initializeApp(firebaseConfig);
     return getSdks(firebaseApp);
   }
   
-  // For production, try the automatic initialization first.
+  // For production environments (like App Hosting), Firebase should be
+  // automatically initialized. We'll attempt that first.
   let firebaseApp;
   try {
+    // This will succeed if the app is deployed to a Firebase environment
+    // and the auto-initialization script is present.
     firebaseApp = initializeApp();
   } catch (e) {
+    // If auto-init fails (e.g., running prod build locally), fall back to our config.
     console.warn('Automatic Firebase initialization failed, falling back to local config.', e);
     firebaseApp = initializeApp(firebaseConfig);
   }

@@ -28,8 +28,10 @@ export type CommunityPost = {
   subject: string;
   options: string[];
   aiRecommendation: string;
-  aiJustification: string;
+aiJustification: string;
   createdAt: string;
   postedAt?: string;
   commentCount: number;
+  votes: { [option: string]: number };
+  voters: { [uid: string]: string }; // Maps user ID to their chosen option
 };

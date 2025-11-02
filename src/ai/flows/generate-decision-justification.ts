@@ -44,7 +44,7 @@ const prompt = ai.definePrompt({
 
   Based on their context, you have recommended: "{{aiRecommendation}}".
 
-  Now, provide a {{responseLength}} justification for why "{{aiRecommendation}}" is the best choice. Explain your reasoning clearly.`,
+  Now, provide a {{responseLength}} justification for why "{{aiRecommendation}}" is the best choice. Explain your reasoning clearly. When the response length is 'long', the justification should be detailed but must not exceed 12 lines.`,
 });
 
 const generateDecisionJustificationFlow = ai.defineFlow(
