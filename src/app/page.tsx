@@ -17,7 +17,7 @@ function CommunityOpinions() {
     firestore ? query(collection(firestore, 'community-posts'), orderBy('createdAt', 'desc'), limit(2)) : null
   , [firestore]);
 
-  const { data: posts, loading } = useCollection<CommunityPost>(postsQuery);
+  const { data: posts, isLoading } = useCollection<CommunityPost>(postsQuery);
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -28,7 +28,7 @@ function CommunityOpinions() {
         <div className="text-xs text-slate-400">Trending</div>
       </div>
       <div className="mt-3 space-y-2">
-        {loading ? (
+        {isLoading ? (
             <>
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-full" />

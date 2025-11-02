@@ -1,5 +1,5 @@
 'use client';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { Decision } from '@/lib/types';
@@ -29,11 +29,14 @@ export default function TrackerPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  const decisionsCollection = user && firestore
-    ? query(collection(firestore, 'users', user.uid, 'decisions'), orderBy('createdAt', 'desc'))
-    : null;
+  const decisionsCollection = useMemoFirebase(() => 
+    user && firestore
+      ? query(collection(firestore, 'users', user.uid, 'decisions'), orderBy('createdAt', 'desc'))
+      : null,
+    [user, firestore]
+  );
 
-  const { data: decisions, loading: decisionsLoading } = useCollection<Decision>(decisionsCollection);
+  const { data: decisions, isLoading: decisionsLoading } = useCollection<Decision>(decisionsCollection);
 
   useEffect(() => {
     if (!user && !userLoading) {
