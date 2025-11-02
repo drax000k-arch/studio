@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
 import { useFirebaseApp } from '@/firebase/provider';
-import { doc, getDoc, getFirestore, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 

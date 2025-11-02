@@ -13,7 +13,7 @@ import type { DecisionResult } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
