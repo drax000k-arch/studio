@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Share2, ThumbsDown, ThumbsUp, Trash2, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Send, ThumbsDown, ThumbsUp, Trash2, AlertCircle, Sparkles } from 'lucide-react';
 import { getAiDecision, type ActionState } from '@/lib/actions';
 import { Textarea } from '../ui/textarea';
 import { CommunityPostDialog } from './community-post-dialog';
@@ -266,8 +266,8 @@ export default function DecisionMaker() {
                 <Button variant="outline" size="sm" className="bg-white shadow-sm flex items-center gap-2"><ThumbsDown size={14}/> Not helpful</Button>
                 {user && !isDirectAnswer && (
                    <Button variant="ghost" size="sm" className="ml-auto text-sm text-slate-500" onClick={() => setIsCommunityDialogOpen(true)}>
-                      <Share2 className="mr-2 size-4" />
-                      Share
+                      <Send className="mr-2 size-4" />
+                      Post to Community
                   </Button>
                 )}
               </div>
@@ -283,8 +283,9 @@ export default function DecisionMaker() {
           decision={{
             subject: decisionData.subject,
             options: resultData.options,
+            recommendation: resultData.recommendation,
+            justification: resultData.justification
           }}
-          decisionResult={resultData}
         />
       )}
     </>

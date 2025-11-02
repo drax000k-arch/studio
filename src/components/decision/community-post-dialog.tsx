@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import type { DecisionResult } from '@/lib/types';
+import type { Decision } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
@@ -20,18 +20,13 @@ import { useRouter } from 'next/navigation';
 type CommunityPostDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  decision: {
-    subject: string;
-    options: string[];
-  };
-  decisionResult: DecisionResult;
+  decision: Pick<Decision, 'subject' | 'options' | 'recommendation' | 'justification'>;
 };
 
 export function CommunityPostDialog({
   open,
   onOpenChange,
   decision,
-  decisionResult,
 }: CommunityPostDialogProps) {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -57,8 +52,8 @@ export function CommunityPostDialog({
       },
       subject: decision.subject,
       options: decision.options,
-      aiRecommendation: decisionResult.recommendation,
-      aiJustification: decisionResult.justification,
+      aiRecommendation: decision.recommendation,
+      aiJustification: decision.justification,
       createdAt: new Date().toISOString(),
       commentCount: 0,
     };
@@ -101,10 +96,10 @@ export function CommunityPostDialog({
               variant="secondary"
               className="bg-primary/10 text-primary border-primary/20"
             >
-              {decisionResult.recommendation}
+              {decision.recommendation}
             </Badge>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {decisionResult.justification}
+              {decision.justification}
             </p>
           </div>
         </div>

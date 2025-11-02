@@ -6,29 +6,46 @@ import type { Decision } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { AddDecisionDialog } from '@/components/decision/add-decision-dialog';
 import { StatusSelector } from '@/components/decision/status-selector';
+import { CommunityPostDialog } from '@/components/decision/community-post-dialog';
 
 function DecisionCard({ decision }: { decision: Decision }) {
+  const [isCommunityDialogOpen, setIsCommunityDialogOpen] = useState(false);
   const decisionDate = decision.createdAt ? new Date(decision.createdAt) : null;
   const formattedDate = decisionDate ? format(decisionDate, 'MMM d, yyyy') : 'just now';
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-400">{formattedDate}</span>
-        <StatusSelector decision={decision} />
-      </div>
-      <div>
-        <div className="font-medium text-slate-800">{decision.subject}</div>
-        <div className="text-sm text-slate-500 mt-1">
-          <span className="font-semibold text-primary">AI says:</span> {decision.recommendation}
+    <>
+      <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400">{formattedDate}</span>
+          <StatusSelector decision={decision} />
+        </div>
+        <div>
+          <div className="font-medium text-slate-800">{decision.subject}</div>
+          <div className="text-sm text-slate-500 mt-1">
+            <span className="font-semibold text-primary">AI says:</span> {decision.recommendation}
+          </div>
+        </div>
+        <div className="mt-2 flex justify-end">
+          <Button variant="ghost" size="sm" className="text-sm text-slate-500" onClick={() => setIsCommunityDialogOpen(true)}>
+            <Send className="mr-2 size-4" />
+            Post to Community
+          </Button>
         </div>
       </div>
-    </div>
+      {isCommunityDialogOpen && (
+        <CommunityPostDialog
+          open={isCommunityDialogOpen}
+          onOpenChange={setIsCommunityDialogOpen}
+          decision={decision}
+        />
+      )}
+    </>
   );
 }
 
