@@ -5,10 +5,6 @@ import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-rec
 import { generateDirectAnswer } from '@/ai/flows/generate-direct-answer';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { addDocumentNonBlocking } from '@/firebase';
-import { collection, getFirestore } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
-
 
 export type ActionState = {
   status: 'success' | 'error' | 'idle';
@@ -21,9 +17,8 @@ const decisionFormSchema = z.object({
   options: z.array(z.string().min(1)).optional(),
   userContext: z.string().optional(),
   responseLength: z.enum(['short', 'long']),
-  userId: z.string().optional(),
+  userId: z.string().optional(), // We'll keep userId for potential future use but won't use it for saving here.
 });
-
 
 export async function getAiDecision(
   data: z.infer<typeof decisionFormSchema>
@@ -38,7 +33,7 @@ export async function getAiDecision(
       };
     }
 
-    const { subject, userContext, responseLength, userId } = validation.data;
+    const { subject, userContext, responseLength } = validation.data;
     let options = validation.data.options;
 
     // SCENARIO 1: User did NOT provide options. Act as a direct conversational AI.
@@ -57,29 +52,12 @@ export async function getAiDecision(
         justification: directAnswerResult.answer,
         options: [], // No options were involved.
       };
-      
-       if (userId) {
-         // This is now a client-side save, which is not ideal but will work for now
-         // to unblock the user. A proper fix involves a callable function.
-         const { firestore } = initializeFirebase();
-         const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
-         addDocumentNonBlocking(decisionsCollection, {
-            subject: subject,
-            options: [],
-            userContext,
-            recommendation: "Direct Answer",
-            justification: directAnswerResult.answer,
-            status: 'Pending',
-            createdAt: new Date().toISOString()
-         });
-      }
 
       return {
         status: 'success',
         result: finalResult,
       };
     }
-
 
     // SCENARIO 2: User provided options. Act as a decision-maker.
     
@@ -116,24 +94,7 @@ export async function getAiDecision(
       options: options,
     };
 
-    // Step 4: Save the decision to Firestore if a user is logged in.
-    if (userId) {
-       // This is now a client-side save, which is not ideal but will work for now
-       // to unblock the user. A proper fix involves a callable function.
-       const { firestore } = initializeFirebase();
-       const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
-       addDocumentNonBlocking(decisionsCollection, {
-          subject,
-          options,
-          userContext,
-          recommendation: finalResult.recommendation,
-          justification: finalResult.justification,
-          status: 'Pending',
-          createdAt: new Date().toISOString()
-       });
-    }
-
-    // Step 5: Return success state
+    // Step 4: Return success state - NO SAVING FROM THE SERVER ACTION
     return {
       status: 'success',
       result: finalResult,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,9 +20,11 @@ import { Textarea } from '../ui/textarea';
 import { CommunityPostDialog } from './community-post-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '../ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const decisionFormSchema = z.object({
   subject: z.string().min(3, { message: 'Please describe your situation.' }),
@@ -37,6 +39,8 @@ export default function DecisionMaker() {
   const [actionState, setActionState] = useState<ActionState>({ status: 'idle' });
   const [isCommunityDialogOpen, setIsCommunityDialogOpen] = useState(false);
   const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const form = useForm<DecisionFormValues>({
     resolver: zodResolver(decisionFormSchema),
@@ -59,10 +63,36 @@ export default function DecisionMaker() {
     setActionState(result);
   };
   
-  const isLoading = form.formState.isSubmitting;
-  const decisionData = form.getValues();
+  const { formState, getValues } = form;
+  const isLoading = formState.isSubmitting;
+  const decisionData = getValues();
   const resultData = actionState.status === 'success' ? actionState.result : null;
   const isDirectAnswer = resultData?.options.length === 0;
+
+  useEffect(() => {
+    if (actionState.status === 'success' && actionState.result && user && firestore) {
+      const { subject, options, userContext } = getValues();
+      const { recommendation, justification } = actionState.result;
+
+      const decisionsCollection = collection(firestore, 'users', user.uid, 'decisions');
+      const newDecision = {
+        subject,
+        options,
+        userContext,
+        recommendation,
+        justification,
+        status: 'Pending',
+        createdAt: new Date().toISOString(),
+      };
+      
+      addDocumentNonBlocking(decisionsCollection, newDecision);
+
+      toast({
+        title: 'Decision Saved',
+        description: 'Your decision and AI advice have been saved to your tracker.',
+      });
+    }
+  }, [actionState, user, firestore, getValues, toast]);
 
 
   return (
