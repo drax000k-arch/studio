@@ -6,8 +6,7 @@ import { generateDecisionOptions } from '@/ai/flows/generate-decision-options';
 import { generateDirectAnswer } from '@/ai/flows/generate-direct-answer';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { initializeFirebase } from '@/firebase';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { initializeFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export type ActionState = {
