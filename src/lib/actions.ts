@@ -5,7 +5,9 @@ import { generateDecisionRecommendation } from '@/ai/flows/generate-decision-rec
 import { generateDirectAnswer } from '@/ai/flows/generate-direct-answer';
 import { z } from 'zod';
 import type { DecisionResult } from '@/lib/types';
-import { saveDecisionToFirestore } from '@/firebase/server-actions';
+import { addDocumentNonBlocking } from '@/firebase';
+import { collection, getFirestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 
 export type ActionState = {
@@ -57,13 +59,18 @@ export async function getAiDecision(
       };
       
        if (userId) {
-         await saveDecisionToFirestore(userId, {
+         // This is now a client-side save, which is not ideal but will work for now
+         // to unblock the user. A proper fix involves a callable function.
+         const { firestore } = initializeFirebase();
+         const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
+         addDocumentNonBlocking(decisionsCollection, {
             subject: subject,
             options: [],
             userContext,
             recommendation: "Direct Answer",
             justification: directAnswerResult.answer,
             status: 'Pending',
+            createdAt: new Date().toISOString()
          });
       }
 
@@ -111,13 +118,18 @@ export async function getAiDecision(
 
     // Step 4: Save the decision to Firestore if a user is logged in.
     if (userId) {
-       await saveDecisionToFirestore(userId, {
+       // This is now a client-side save, which is not ideal but will work for now
+       // to unblock the user. A proper fix involves a callable function.
+       const { firestore } = initializeFirebase();
+       const decisionsCollection = collection(firestore, 'users', userId, 'decisions');
+       addDocumentNonBlocking(decisionsCollection, {
           subject,
           options,
           userContext,
           recommendation: finalResult.recommendation,
           justification: finalResult.justification,
           status: 'Pending',
+          createdAt: new Date().toISOString()
        });
     }
 
