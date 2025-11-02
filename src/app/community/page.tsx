@@ -1,6 +1,6 @@
 'use client';
-import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import type { CommunityPost } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +66,6 @@ function PostCard({ post }: { post: CommunityPost }) {
     
     const postRef = doc(firestore, 'community-posts', post.id);
     
-    // Using dot notation for nested fields
     const newVotes = { ...post.votes, [option]: (post.votes[option] || 0) + 1 };
     const newVoters = { ...post.voters, [user.uid]: option };
     
@@ -115,13 +113,11 @@ function PostCard({ post }: { post: CommunityPost }) {
              <button key={index} onClick={() => handleVote(option)} 
                 className="w-full px-3 py-2 text-sm text-left rounded-md bg-slate-100 hover:bg-slate-200 transition-colors relative disabled:opacity-70 disabled:cursor-not-allowed"
                 disabled={!!userVote}>
-                <div className="flex justify-between items-center">
+                 <div className="absolute top-0 left-0 h-full rounded-md bg-primary/10 transition-all duration-300" style={{ width: userVote ? `${percentage}%` : '0%' }}></div>
+                <div className="flex justify-between items-center relative z-10">
                   <span>{option}</span>
                    {userVote && <span className="font-bold">{percentage}%</span>}
                 </div>
-                 {userVote && (
-                    <div className="absolute top-0 left-0 h-full rounded-md bg-primary/10" style={{ width: `${percentage}%` }}></div>
-                )}
             </button>
            )
         })}
@@ -182,9 +178,14 @@ export default function CommunityPage() {
           voters: {},
       };
       
-      addDocumentNonBlocking(postsCollection, postData);
-      setNewPost('');
-      toast({ title: 'Posted to community!' });
+      try {
+        await addDoc(postsCollection, postData);
+        setNewPost('');
+        toast({ title: 'Posted to community!' });
+      } catch (error) {
+        console.error("Error creating post:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not create post.' });
+      }
   };
 
 

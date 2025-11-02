@@ -9,16 +9,19 @@ import { getMessaging } from 'firebase/messaging';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  // If an app is already initialized, return the existing instance's SDKs.
-  if (getApps().length > 0) {
-    return getSdks(getApp());
-  }
-
   // When in a development environment, we always want to use the explicit
   // config object to ensure we're connecting to the correct project.
   if (process.env.NODE_ENV === 'development') {
+    if (getApps().length > 0) {
+      return getSdks(getApp());
+    }
     const firebaseApp = initializeApp(firebaseConfig);
     return getSdks(firebaseApp);
+  }
+  
+  // If an app is already initialized, return the existing instance's SDKs.
+  if (getApps().length > 0) {
+    return getSdks(getApp());
   }
   
   // For production environments (like App Hosting), Firebase should be

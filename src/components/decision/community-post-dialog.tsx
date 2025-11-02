@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import type { Decision } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -65,14 +65,22 @@ export function CommunityPostDialog({
       voters: {},
     };
     
-    addDocumentNonBlocking(postsCollection, postData);
-    
-    toast({
-      title: 'Success!',
-      description: 'Your decision has been posted to the community.',
-    });
-    onOpenChange(false);
-    router.push('/community');
+    try {
+      await addDoc(postsCollection, postData);
+      toast({
+        title: 'Success!',
+        description: 'Your decision has been posted to the community.',
+      });
+      onOpenChange(false);
+      router.push('/community');
+    } catch (error) {
+       console.error("Error posting to community:", error);
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not post to the community. Please try again.',
+      });
+    }
   };
 
   return (

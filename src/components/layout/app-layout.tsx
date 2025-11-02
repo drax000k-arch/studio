@@ -6,7 +6,6 @@ import { Home, MessageSquare, BarChart2, User, Plus, Lock } from 'lucide-react';
 import { AppHeader } from './app-header';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useUser } from '@/firebase';
 import {
   Tooltip,
@@ -51,11 +50,10 @@ function BottomNav() {
              const tooltipContent = isLocked ? 'Please log in to access' : it.label;
 
             return (
-              <Tooltip>
+              <Tooltip key={it.id}>
                 <TooltipTrigger asChild>
                   <Link
                     href={navPath}
-                    key={it.id}
                     className={cn(
                       'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors',
                       isActive ? 'text-primary' : 'text-slate-400',
@@ -90,18 +88,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen">
       <div className="max-w-3xl mx-auto pt-2 pb-28">
         {showHeader && <AppHeader />}
-         <AnimatePresence mode="wait">
-          <motion.main
+         <main
             key={pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
             className={cn('bg-transparent rounded-lg', showHeader && 'mt-4' )}
           >
             {children}
-          </motion.main>
-        </AnimatePresence>
+          </main>
       </div>
        {showHeader && <BottomNav />}
     </div>
