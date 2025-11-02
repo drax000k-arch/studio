@@ -13,7 +13,7 @@ import type { DecisionResult } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -60,7 +60,7 @@ export function CommunityPostDialog({
       options: decision.options,
       aiRecommendation: decisionResult.recommendation,
       aiJustification: decisionResult.justification,
-      createdAt: serverTimestamp(),
+      createdAt: new Date().toISOString(),
       commentCount: 0,
     };
     

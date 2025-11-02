@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
 import { useFirebaseApp } from '@/firebase/provider';
-import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, setDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -23,12 +23,14 @@ export function useUser() {
       return;
     }
     const auth = getAuth(app);
-    const firestore = getFirestore(app);
-
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in, update state immediately for a responsive UI
         setUserState({ user, loading: false });
+        
+        // Ensure firestore is initialized before use
+        const firestore = getFirestore(app);
 
         // Now, handle Firestore profile in the background
         const userRef = doc(firestore, 'users', user.uid);
@@ -42,6 +44,7 @@ export function useUser() {
               email: user.email,
               displayName: user.displayName,
               photoURL: user.photoURL,
+              createdAt: new Date().toISOString(),
             };
             // Use setDoc with a .catch block for robust error handling
             setDoc(userRef, profileData)
