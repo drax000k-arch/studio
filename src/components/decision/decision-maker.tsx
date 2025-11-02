@@ -20,8 +20,8 @@ import { Textarea } from '../ui/textarea';
 import { CommunityPostDialog } from './community-post-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -85,12 +85,21 @@ export default function DecisionMaker() {
         createdAt: new Date().toISOString(),
       };
       
-      addDocumentNonBlocking(decisionsCollection, newDecision);
-
-      toast({
-        title: 'Decision Saved',
-        description: 'Your decision and AI advice have been saved to your tracker.',
-      });
+      addDoc(decisionsCollection, newDecision)
+        .then(() => {
+          toast({
+            title: 'Decision Saved',
+            description: 'Your decision and AI advice have been saved to your tracker.',
+          });
+        })
+        .catch(error => {
+          console.error("Error saving decision:", error);
+          toast({
+            variant: 'destructive',
+            title: 'Save Error',
+            description: 'Could not save your decision to the tracker.',
+          });
+        });
     }
   }, [actionState, user, firestore, getValues, toast]);
 

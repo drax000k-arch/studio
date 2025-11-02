@@ -15,8 +15,8 @@ import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -54,7 +54,7 @@ export function AddDecisionDialog({ open, onOpenChange }: AddDecisionDialogProps
     },
   });
 
-  const handleSave = (data: DecisionFormData) => {
+  const handleSave = async (data: DecisionFormData) => {
     if (!user || !firestore) {
       toast({
         variant: 'destructive',
@@ -72,15 +72,22 @@ export function AddDecisionDialog({ open, onOpenChange }: AddDecisionDialogProps
       createdAt: new Date().toISOString(),
       status: data.status,
     };
-
-    addDocumentNonBlocking(decisionsCollection, newDecision);
-
-    toast({
-      title: 'Decision Saved',
-      description: 'Your new decision has been added to your tracker.',
-    });
-    form.reset();
-    onOpenChange(false);
+    
+    try {
+      await addDoc(decisionsCollection, newDecision);
+      toast({
+        title: 'Decision Saved',
+        description: 'Your new decision has been added to your tracker.',
+      });
+      form.reset();
+      onOpenChange(false);
+    } catch(e) {
+       toast({
+        variant: 'destructive',
+        title: 'Error Saving Decision',
+        description: 'Could not save your decision. Please try again.',
+      });
+    }
   };
 
   return (

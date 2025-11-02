@@ -6,9 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import type { Decision, DecisionStatus } from '@/lib/types';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { StatusBadge } from './status-badge';
 
@@ -17,7 +17,7 @@ export function StatusSelector({ decision }: { decision: Decision }) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleStatusChange = (newStatus: DecisionStatus) => {
+  const handleStatusChange = async (newStatus: DecisionStatus) => {
     if (!user || !firestore) {
       toast({
         variant: 'destructive',
@@ -28,12 +28,21 @@ export function StatusSelector({ decision }: { decision: Decision }) {
     }
 
     const decisionRef = doc(firestore, 'users', user.uid, 'decisions', decision.id);
-    updateDocumentNonBlocking(decisionRef, { status: newStatus });
+    
+    try {
+      await updateDoc(decisionRef, { status: newStatus });
+      toast({
+        title: 'Status Updated',
+        description: `Decision moved to "${newStatus}".`,
+      });
+    } catch(e) {
+      toast({
+        variant: 'destructive',
+        title: 'Error Updating Status',
+        description: 'Could not update the decision status. Please try again.',
+      });
+    }
 
-    toast({
-      title: 'Status Updated',
-      description: `Decision moved to "${newStatus}".`,
-    });
   };
 
   return (

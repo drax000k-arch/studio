@@ -17,7 +17,7 @@ const decisionFormSchema = z.object({
   options: z.array(z.string().min(1)).optional(),
   userContext: z.string().optional(),
   responseLength: z.enum(['short', 'long']),
-  userId: z.string().optional(), // We'll keep userId for potential future use but won't use it for saving here.
+  userId: z.string().optional(),
 });
 
 export async function getAiDecision(
@@ -94,7 +94,6 @@ export async function getAiDecision(
       options: options,
     };
 
-    // Step 4: Return success state - The decision will be saved on the client-side.
     return {
       status: 'success',
       result: finalResult,
