@@ -94,7 +94,7 @@ export async function getAiDecision(
       options: options,
     };
 
-    // Step 4: Return success state - NO SAVING FROM THE SERVER ACTION
+    // Step 4: Return success state - The decision will be saved on the client-side.
     return {
       status: 'success',
       result: finalResult,

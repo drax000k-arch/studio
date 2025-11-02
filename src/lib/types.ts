@@ -21,15 +21,15 @@ export type DecisionResult = {
 export type CommunityPost = {
   id: string;
   author: {
-    name: string;
-    avatarUrl: string;
+    name: string | null;
+    avatarUrl: string | null;
     uid?: string;
   };
   subject: string;
   options: string[];
   aiRecommendation: string;
   aiJustification: string;
-  createdAt?: string;
+  createdAt: string;
   postedAt?: string;
   commentCount: number;
 };

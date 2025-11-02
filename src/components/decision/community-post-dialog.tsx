@@ -12,11 +12,10 @@ import { Button } from '@/components/ui/button';
 import type { DecisionResult } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type CommunityPostDialogProps = {
   open: boolean;
