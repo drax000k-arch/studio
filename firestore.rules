@@ -3,27 +3,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: Logged-in users can create their own profile.
-    // They can only read/update their own profile after it exists.
+    // Users can only read, update, and create their own document.
     match /users/{userId} {
       allow read, update: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId;
     }
 
-    // User-specific decisions
+    // Users can manage their own decision scenarios.
+    match /users/{userId}/decisionScenarios/{scenarioId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Decisions are now nested under decisionScenarios, this is legacy.
     match /users/{userId}/decisions/{decisionId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Community Posts: Allow anyone to read, but only authenticated users to create.
+    // Community posts can be read by anyone, but only written by authenticated users.
     match /community-posts/{postId} {
       allow read: if true;
       allow write: if request.auth != null;
-    }
-
-    // Decision Scenarios: Users can manage their own decision scenarios.
-    match /users/{userId}/decisionScenarios/{scenarioId} {
-      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
     
     // Public Scenarios: Readable by anyone, writable only by authenticated users.
