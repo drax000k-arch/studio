@@ -1,3 +1,6 @@
+'use client';
+
+export type DecisionStatus = 'Pending' | 'Completed' | 'Failed';
 
 export type Decision = {
   id: string;
@@ -7,6 +10,7 @@ export type Decision = {
   recommendation: string;
   justification: string;
   createdAt: string;
+  status?: DecisionStatus;
 };
 
 export type DecisionResult = {

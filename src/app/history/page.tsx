@@ -5,21 +5,29 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Decision } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { Loader2, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { AddDecisionDialog } from '@/components/decision/add-decision-dialog';
+import { StatusSelector } from '@/components/decision/status-selector';
 
-function TrackerItem({ decision }: { decision: Decision }) {
+function DecisionCard({ decision }: { decision: Decision }) {
   const decisionDate = decision.createdAt ? new Date(decision.createdAt) : null;
-  const timeAgo = decisionDate ? formatDistanceToNow(decisionDate, { addSuffix: true }) : 'just now';
+  const formattedDate = decisionDate ? format(decisionDate, 'MMM d, yyyy') : 'just now';
 
   return (
-    <div className="bg-white rounded-xl p-3 shadow-sm flex items-center justify-between">
-      <div>
-        <div className="font-medium">{decision.subject}</div>
-        <div className="text-xs text-slate-400">AI: {decision.recommendation} • {timeAgo}</div>
+    <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-400">{formattedDate}</span>
+        <StatusSelector decision={decision} />
       </div>
-      <div className="text-sm font-semibold text-primary">Active</div>
+      <div>
+        <div className="font-medium text-slate-800">{decision.subject}</div>
+        <div className="text-sm text-slate-500 mt-1">
+          <span className="font-semibold text-primary">AI says:</span> {decision.recommendation}
+        </div>
+      </div>
     </div>
   );
 }
@@ -28,11 +36,13 @@ export default function TrackerPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
-  const decisionsCollection = useMemoFirebase(() => 
-    user && firestore
-      ? query(collection(firestore, 'users', user.uid, 'decisions'), orderBy('createdAt', 'desc'))
-      : null,
+  const decisionsCollection = useMemoFirebase(
+    () =>
+      user && firestore
+        ? query(collection(firestore, 'users', user.uid, 'decisions'), orderBy('createdAt', 'desc'))
+        : null,
     [user, firestore]
   );
 
@@ -53,26 +63,36 @@ export default function TrackerPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="font-semibold text-lg">Decision Tracker</div>
-      <div className="space-y-3">
-        {decisionsLoading ? (
-          <>
-            <Skeleton className="h-16 w-full rounded-xl" />
-            <Skeleton className="h-16 w-full rounded-xl" />
-            <Skeleton className="h-16 w-full rounded-xl" />
-          </>
-        ) : decisions && decisions.length > 0 ? (
-          decisions.map((decision) => (
-            <TrackerItem key={decision.id} decision={decision} />
-          ))
-        ) : (
-           <div className="text-center py-16">
-            <h3 className="font-semibold">No decisions tracked yet.</h3>
-            <p className="text-slate-500 text-sm mt-2">Your past decisions will appear here.</p>
-          </div>
-        )}
+    <>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold text-lg">Decision Tracker</div>
+          <Button onClick={() => setAddDialogOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Decision
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          {decisionsLoading ? (
+            <>
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </>
+          ) : decisions && decisions.length > 0 ? (
+            decisions.map((decision) => <DecisionCard key={decision.id} decision={decision} />)
+          ) : (
+            <div className="text-center py-16">
+              <h3 className="font-semibold">No decisions tracked yet.</h3>
+              <p className="text-slate-500 text-sm mt-2">
+                Use the "Add Decision" button to save your first one.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <AddDecisionDialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen} />
+    </>
   );
 }
